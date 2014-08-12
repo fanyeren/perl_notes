@@ -208,7 +208,7 @@ while (my $line = <$predictor_pc>) {
                     my $y = $2;
                     my $z = $3;
 
-                    #wasq
+                    wasq
                     if ($x == '0') {
                         my $exp = first { $_ =~ m/ASQ$/x } @exps;
                         if (defined $exp) {
