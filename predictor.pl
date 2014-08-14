@@ -10,10 +10,10 @@ use List::Util qw(first);
 my @time_seg = localtime(time - 86400);
 
 my $yesterday = "" . ($time_seg[5] + 1900) . (sprintf("%02d", ($time_seg[4] + 1))) . (sprintf("%02d", $time_seg[3]));
-my $yesterday_str = "" . ($time_seg[5] + 1900) . '-' . (sprintf("%02d",
-    ($time_seg[4] + 1))) . '-' . (sprintf("%02d",
-    $time_seg[3])) . ' ' . (sprintf("%02d", ($time_seg[2]))) . ':' . (sprintf("%02d",
-    ($time_seg[1]))) . ':' . (sprintf("%02d", ($time_seg[1])));
+my $yesterday_str = "" . ($time_seg[5] + 1900) . '-'
+    . (sprintf("%02d", ($time_seg[4] + 1))) . '-' . (sprintf("%02d", $time_seg[3]))
+    . ' ' . (sprintf("%02d", ($time_seg[2]))) . ':' . (sprintf("%02d", ($time_seg[1])))
+    . ':' . (sprintf("%02d", ($time_seg[1])));
 
 my $imas_log = "/home/work/imas/log/imas.log." . $yesterday . "*";
 my $imas_log_wf = "/home/work/imas/log/imas.log.wf." . $yesterday;
