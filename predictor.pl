@@ -9,13 +9,20 @@ use List::Util qw(first);
 
 my @time_seg = localtime(time - 86400);
 
-my $yesterday = "" . ($time_seg[5] + 1900) . (sprintf("%02d", ($time_seg[4] + 1))) . (sprintf("%02d", $time_seg[3])); my $yesterday_str = "" . ($time_seg[5] + 1900) . '-' . (sprintf("%02d", ($time_seg[4] + 1))) . '-' . (sprintf("%02d", $time_seg[3])) . ' ' . (sprintf("%02d", ($time_seg[2]))) . ':' . (sprintf("%02d", ($time_seg[1]))) . ':' . (sprintf("%02d", ($time_seg[1])));
+my $yesterday = "" . ($time_seg[5] + 1900) . (sprintf("%02d", ($time_seg[4] + 1))) . (sprintf("%02d", $time_seg[3]));
+my $yesterday_str = "" . ($time_seg[5] + 1900) . '-' . (sprintf("%02d",
+    ($time_seg[4] + 1))) . '-' . (sprintf("%02d",
+    $time_seg[3])) . ' ' . (sprintf("%02d", ($time_seg[2]))) . ':' . (sprintf("%02d",
+    ($time_seg[1]))) . ':' . (sprintf("%02d", ($time_seg[1])));
 
-my $imas_log = "/home/work/imas/log/imas.log." . $yesterday . "*"; my $imas_log_wf = "/home/work/imas/log/imas.log.wf." . $yesterday;
+my $imas_log = "/home/work/imas/log/imas.log." . $yesterday . "*";
+my $imas_log_wf = "/home/work/imas/log/imas.log.wf." . $yesterday;
 
 open my $predictor_output, ">", "/home/work/opbin/noah_stat/output/predictor.$yesterday" or die "$!\n";
 
-open my $predictor_wf, ">", "/home/work/opbin/noah_stat/predictor.wf" or die "$!\n"; open my $predictor_pc, ">", "/home/work/opbin/noah_stat/predictor.pc" or die "$!\n"; open my $predictor_wise, ">", "/home/work/opbin/noah_stat/predictor.wise" or die "$!\n";
+open my $predictor_wf, ">", "/home/work/opbin/noah_stat/predictor.wf" or die "$!\n";
+open my $predictor_pc, ">", "/home/work/opbin/noah_stat/predictor.pc" or die "$!\n";
+open my $predictor_wise, ">", "/home/work/opbin/noah_stat/predictor.wise" or die "$!\n";
 
 my @imas_logs = bsd_glob($imas_log);
 
@@ -102,7 +109,9 @@ close $predictor_wf;
 close $predictor_wise;
 close $predictor_pc;
 
-open $predictor_wf, "<", "/home/work/opbin/noah_stat/predictor.wf" or die "$!\n"; open $predictor_pc, "<", "/home/work/opbin/noah_stat/predictor.pc" or die "$!\n"; open $predictor_wise, "<", "/home/work/opbin/noah_stat/predictor.wise" or die "$!\n";
+open $predictor_wf, "<", "/home/work/opbin/noah_stat/predictor.wf" or die "$!\n";
+open $predictor_pc, "<", "/home/work/opbin/noah_stat/predictor.pc" or die "$!\n";
+open $predictor_wise, "<", "/home/work/opbin/noah_stat/predictor.wise" or die "$!\n";
 
 my %exp_total = ();
 my %exp_failed_total = ();
