@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use File::Glob ':glob';
+use Carp qw(croak);
 
 use List::Util qw(first);
 
@@ -15,15 +16,15 @@ my $yesterday_str = "" . ($time_seg[5] + 1900) . '-' . (sprintf("%02d", ($time_s
 my $imas_log = "/home/work/imas/log/imas.log." . $yesterday . "*";
 my $imas_log_wf = "/home/work/imas/log/imas.log.wf." . $yesterday;
 
-open my $predictor_output, ">", "/home/work/opbin/noah_stat/output/predictor.$yesterday" or die "$!\n";
+open my $predictor_output, ">", "/home/work/opbin/noah_stat/output/predictor.$yesterday" or croak "$!\n";
 
-open my $predictor_wf, ">", "/home/work/opbin/noah_stat/predictor.wf" or die "$!\n";
-open my $predictor_pc, ">", "/home/work/opbin/noah_stat/predictor.pc" or die "$!\n";
-open my $predictor_wise, ">", "/home/work/opbin/noah_stat/predictor.wise" or die "$!\n";
+open my $predictor_wf, ">", "/home/work/opbin/noah_stat/predictor.wf" or croak "$!\n";
+open my $predictor_pc, ">", "/home/work/opbin/noah_stat/predictor.pc" or croak "$!\n";
+open my $predictor_wise, ">", "/home/work/opbin/noah_stat/predictor.wise" or croak "$!\n";
 
 my @imas_logs = bsd_glob($imas_log);
 
-open my $imas_log_fd, "<", $imas_log_wf or die "$!\n";
+open my $imas_log_fd, "<", $imas_log_wf or croak "$!\n";
 while (my $line = <$imas_log_fd>) {
     chomp $line;
     if ($line =~ m/predictor_api\ talk\ to\ server\ error/x) {
@@ -34,7 +35,7 @@ print $predictor_wf "\n";
 
 
 for my $file (@imas_logs) {
-    open my $fd, "<", $file or die "$!\n";
+    open my $fd, "<", $file or croak "$!\n";
     while (my $line = <$fd>) {
         chomp $line;
         my $wise = 0;
@@ -110,9 +111,9 @@ close $predictor_wf;
 close $predictor_wise;
 close $predictor_pc;
 
-open $predictor_wf, "<", "/home/work/opbin/noah_stat/predictor.wf" or die "$!\n";
-open $predictor_pc, "<", "/home/work/opbin/noah_stat/predictor.pc" or die "$!\n";
-open $predictor_wise, "<", "/home/work/opbin/noah_stat/predictor.wise" or die "$!\n";
+open $predictor_wf, "<", "/home/work/opbin/noah_stat/predictor.wf" or croak "$!\n";
+open $predictor_pc, "<", "/home/work/opbin/noah_stat/predictor.pc" or croak "$!\n";
+open $predictor_wise, "<", "/home/work/opbin/noah_stat/predictor.wise" or croak "$!\n";
 
 my %exp_total = ();
 my %exp_failed_total = ();
