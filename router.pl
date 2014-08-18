@@ -10,9 +10,7 @@ use List::Util qw(first);
 my @time_seg = localtime(time - 86400);
 
 my $yesterday = "" . ($time_seg[5] + 1900) . (sprintf("%02d", ($time_seg[4] + 1))) . (sprintf("%02d", $time_seg[3]));
-my $yesterday_str = "" . ($time_seg[5] + 1900) . '-' . (sprintf("%02d", ($time_seg[4] + 1)))
-    . '-' . (sprintf("%02d", $time_seg[3])) . ' ' . (sprintf("%02d", ($time_seg[2]))) . ':'
-    . (sprintf("%02d", ($time_seg[1]))) . ':' . (sprintf("%02d", ($time_seg[1])));
+my $yesterday_str = "" . ($time_seg[5] + 1900) . '-' . (sprintf("%02d", ($time_seg[4] + 1))) . '-' . (sprintf("%02d", $time_seg[3])) . ' ' . (sprintf("%02d", ($time_seg[2]))) . ':' . (sprintf("%02d", ($time_seg[1]))) . ':' . (sprintf("%02d", ($time_seg[1])));
 
 my $router_log = "/home/work/router/log/router.log." . $yesterday . "*";
 
@@ -100,11 +98,13 @@ print $router_output $yesterday_str . "\t";
 
 map {
     my $exp = $_;
-    print $router_output "ROUTER_$exp" . ":" . $exp_total{$exp}, "\t"; } keys %exp_total;
+    print $router_output "ROUTER_$exp" . ":" . $exp_total{$exp}, "\t";
+} keys %exp_total;
 
 map {
     my $exp = $_;
-    print $router_output "ROUTER_$exp" . "_FAILED:" . $exp_failed_total{$exp}, "\t"; } keys %exp_failed_total;
+    print $router_output "ROUTER_$exp" . "_FAILED:" . $exp_failed_total{$exp}, "\t";
+} keys %exp_failed_total;
 
 print $router_output "\n";
 

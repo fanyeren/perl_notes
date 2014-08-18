@@ -10,10 +10,7 @@ use List::Util qw(first);
 my @time_seg = localtime(time - 86400);
 
 my $yesterday = "" . ($time_seg[5] + 1900) . (sprintf("%02d", ($time_seg[4] + 1))) . (sprintf("%02d", $time_seg[3]));
-my $yesterday_str = "" . ($time_seg[5] + 1900) . '-'
-    . (sprintf("%02d", ($time_seg[4] + 1))) . '-' . (sprintf("%02d", $time_seg[3]))
-    . ' ' . (sprintf("%02d", ($time_seg[2]))) . ':' . (sprintf("%02d", ($time_seg[1])))
-    . ':' . (sprintf("%02d", ($time_seg[1])));
+my $yesterday_str = "" . ($time_seg[5] + 1900) . '-' . (sprintf("%02d", ($time_seg[4] + 1))) . '-' . (sprintf("%02d", $time_seg[3])) . ' ' . (sprintf("%02d", ($time_seg[2]))) . ':' . (sprintf("%02d", ($time_seg[1]))) . ':' . (sprintf("%02d", ($time_seg[1])));
 
 my $imas_log = "/home/work/imas/log/imas.log." . $yesterday . "*";
 my $imas_log_wf = "/home/work/imas/log/imas.log.wf." . $yesterday;
@@ -26,13 +23,14 @@ open my $predictor_wise, ">", "/home/work/opbin/noah_stat/predictor.wise" or die
 
 my @imas_logs = bsd_glob($imas_log);
 
-open my $imas_log_fd, "<", $imas_log_wf or die "$!\n"; while (my $line = <$imas_log_fd>) {
+open my $imas_log_fd, "<", $imas_log_wf or die "$!\n";
+while (my $line = <$imas_log_fd>) {
     chomp $line;
     if ($line =~ m/predictor_api\ talk\ to\ server\ error/x) {
         print $predictor_wf $line . "\n";
      }
-    print $predictor_wf "\n";
 }
+print $predictor_wf "\n";
 
 
 for my $file (@imas_logs) {
@@ -60,6 +58,9 @@ for my $file (@imas_logs) {
         }
     }
 }
+
+print $predictor_wise "\n";
+print $predictor_pc "\n";
 
 
 my %ovlexp = ();
@@ -116,6 +117,9 @@ open $predictor_wise, "<", "/home/work/opbin/noah_stat/predictor.wise" or die "$
 my %exp_total = ();
 my %exp_failed_total = ();
 
+my %exp_total_coarse = ();
+my %exp_failed_total_coarse = ();
+
 map {
     my $exp = $_;
     $exp_total{$exp} = 0;
@@ -128,7 +132,11 @@ map {
     $exp_failed_total{$exp} = 0;
 } qw(WASQ ASQ CLKQS);
 
-
+map {
+    my $exp = $_;
+    $exp_total_coarse{$exp} = 0;
+    $exp_failed_total_coarse{$exp} = 0;
+} qw(WASQ ASQ CLKQS);
 
 while (my $line = <$predictor_wise>) {
     chomp $line;
@@ -172,25 +180,27 @@ while (my $line = <$predictor_wise>) {
                         if ($ovlexp eq '') {
                             $exp = 'WASQ';
                             $exp_total{$exp} = $exp_total{$exp} + $y;
-                            $exp_failed_total{$exp} = $exp_failed_total{$exp} + $z;
+                            #$exp_failed_total{$exp} = $exp_failed_total{$exp} + $z;
                         } else {
                             $exp = first { $_ =~ m/WASQ$/x } @exps;
                             if (defined $exp) {
                                 $exp_total{$exp} = $exp_total{$exp} + $y;
-                                $exp_failed_total{$exp} = $exp_failed_total{$exp} + $z;
+                            } else {
+                                $exp = 'WASQ';
+                                $exp_total{$exp} = $exp_total{$exp} + $y;
                             }
                         }
                     } elsif ($x == '2') {
                         if ($ovlexp eq '') {
                             $exp = 'CLKQS';
                             $exp_total{$exp} = $exp_total{$exp} + $y;
-                            $exp_total{$exp} = $exp_total{$exp} + $y;
-                            $exp_failed_total{$exp} = $exp_failed_total{$exp} + $z;
                         } else {
                             $exp = first { $_ =~ m/CLKQS$/x } @exps;
                             if (defined $exp) {
                                 $exp_total{$exp} = $exp_total{$exp} + $y;
-                                $exp_failed_total{$exp} = $exp_failed_total{$exp} + $z;
+                            } else {
+                                $exp = 'CLKQS';
+                                $exp_total{$exp} = $exp_total{$exp} + $y;
                             }
                         }
                     }
@@ -243,26 +253,27 @@ while (my $line = <$predictor_pc>) {
                         if ($ovlexp eq '') {
                             $exp = 'ASQ';
                             $exp_total{$exp} = $exp_total{$exp} + $y;
-                            $exp_total{$exp} = $exp_total{$exp} + $y;
-                            $exp_failed_total{$exp} = $exp_failed_total{$exp} + $z;
                         } else {
                             $exp = first { $_ =~ m/ASQ$/x } @exps;
                             if (defined $exp) {
                                 $exp_total{$exp} = $exp_total{$exp} + $y;
-                                $exp_failed_total{$exp} = $exp_failed_total{$exp} + $z;
+                            } else {
+                                $exp = 'ASQ';
+                                $exp_total{$exp} = $exp_total{$exp} + $y;
                             }
                         }
                     } elsif ($x == '1') {
                         if ($ovlexp eq '') {
                             $exp = 'CLKQS';
                             $exp_total{$exp} = $exp_total{$exp} + $y;
-                            $exp_total{$exp} = $exp_total{$exp} + $y;
-                            $exp_failed_total{$exp} = $exp_failed_total{$exp} + $z;
                         } else {
                             $exp = first { $_ =~ m/CLKQS$/x } @exps;
                             if (defined $exp) {
                                 $exp_total{$exp} = $exp_total{$exp} + $y;
-                                $exp_failed_total{$exp} = $exp_failed_total{$exp} + $z;
+                                #$exp_failed_total{$exp} = $exp_failed_total{$exp} + $z;
+                            } else {
+                                $exp = 'CLKQS';
+                                $exp_total{$exp} = $exp_total{$exp} + $y;
                             }
                         }
                     }
@@ -272,16 +283,29 @@ while (my $line = <$predictor_pc>) {
     }
 }
 
+while (my $line = <$predictor_wf>) {
+    chomp $line;
+    if ($line =~ m/predictor_api\ talk\ to\ server\ error.*service_name\(([0-9a-zA-Z\_]+)_group0\)/xms) {
+        my $exp = $1;
+        $exp =~ s/n//xms;
+        $exp =~ s/_//xms;
+        $exp = uc $exp;
+        $exp_failed_total{$exp} = (exists $exp_failed_total{$exp} ? $exp_failed_total{$exp} : 0) + 1;
+    }
+}
+
 
 print $predictor_output $yesterday_str . "\t";
 
 map {
     my $exp = $_;
-    print $predictor_output "IMAS_$exp" . ":" . $exp_total{$exp}, "\t"; } keys %exp_total;
+    print $predictor_output "IMAS_$exp" . ":" . $exp_total{$exp}, "\t";
+} keys %exp_total;
 
 map {
     my $exp = $_;
-    print $predictor_output "IMAS_$exp" . "_FAILED:" . $exp_failed_total{$exp}, "\t"; } keys %exp_failed_total;
+    print $predictor_output "IMAS_$exp" . "_FAILED:" . $exp_failed_total{$exp}, "\t";
+} keys %exp_failed_total;
 
 print $predictor_output "\n";
 
