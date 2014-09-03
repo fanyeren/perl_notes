@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use File::Glob ':glob';
-use Carp qw(croak);
+use Carp qw(croak carp);
 
 use List::Util qw(first);
 
@@ -30,12 +30,14 @@ open my $predictor_wise, ">", "/home/work/opbin/noah_stat/predictor.wise" or cro
 
 my @imas_logs = bsd_glob($imas_log);
 
-open my $imas_log_fd, "<", $imas_log_wf or croak "$!\n";
-while (my $line = <$imas_log_fd>) {
-    chomp $line;
-    if ($line =~ m/predictor_api\ talk\ to\ server\ error|received\ error\ pack\ from\ predictor,\ err_code\(2004\)/x) {
-        print $predictor_wf $line . "\n";
-     }
+open my $imas_log_fd, "<", $imas_log_wf or carp "$!\n";
+if (fileno $imas_log_fd) {
+    while (my $line = <$imas_log_fd>) {
+        chomp $line;
+        if ($line =~ m/predictor_api\ talk\ to\ server\ error|received\ error\ pack\ from\ predictor,\ err_code\(2004\)/x) {
+            print $predictor_wf $line . "\n";
+         }
+    }
 }
 print $predictor_wf "\n";
 
@@ -44,31 +46,33 @@ my $imas_predictor = 0;
 
 for my $file (@imas_logs) {
     open my $fd, "<", $file or croak "$!\n";
-    while (my $line = <$fd>) {
-        chomp $line;
-        my $wise = 0;
-        if ($line =~ m/ws=1/x) {
-            $wise = 1
-        }
+    if (fileno $fd) {
+        while (my $line = <$fd>) {
+            chomp $line;
+            my $wise = 0;
+            if ($line =~ m/ws=1/x) {
+                $wise = 1
+            }
 
-        if ($line =~ m/qspn=(\d+)/x) {
-            $imas_predictor += $1;
-        }
+            if ($line =~ m/qspn=(\d+)/x) {
+                $imas_predictor += $1;
+            }
 
-        my $qs_kpi = '';
-        if ($line =~ m/qs_kpi=([^\ ]+)\ /x) {
-            $qs_kpi = $1;
-        }
+            my $qs_kpi = '';
+            if ($line =~ m/qs_kpi=([^\ ]+)\ /x) {
+                $qs_kpi = $1;
+            }
 
-        my $ovlexp = '';
-        if ($line =~ m/ovlexp=([^\ ]+)\ /x) {
-            $ovlexp = $1;
-        }
+            my $ovlexp = '';
+            if ($line =~ m/ovlexp=([^\ ]+)\ /x) {
+                $ovlexp = $1;
+            }
 
-        if ($wise) {
-            print $predictor_wise "qs_kpi:" . $qs_kpi . " " . "ovlexp:" . $ovlexp, "\n";
-        } else {
-            print $predictor_pc "qs_kpi:" . $qs_kpi . " " . "ovlexp:" . $ovlexp, "\n";
+            if ($wise) {
+                print $predictor_wise "qs_kpi:" . $qs_kpi . " " . "ovlexp:" . $ovlexp, "\n";
+            } else {
+                print $predictor_pc "qs_kpi:" . $qs_kpi . " " . "ovlexp:" . $ovlexp, "\n";
+            }
         }
     }
 }
