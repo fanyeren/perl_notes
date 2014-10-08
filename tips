@@ -1,0 +1,1 @@
+ls logflow/output/*_imas_imbs | perl -lne 'my $file=$_; open my $fd, "<$file"; while(<$fd>){ if ($_ =~ /IMAS_D1BS_DOUBLE_GROUP_FAILED:(\d+)/) {print $file . ": " . $1}}' | sort -k 2 -n

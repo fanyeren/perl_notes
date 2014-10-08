@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use File::Glob ':glob';
-use Carp qw(croak carp);
+use Carp qw(croak);
 
 use List::Util qw(first);
 
@@ -13,11 +13,22 @@ my @time_seg = localtime(time - 86400);
 my $yesterday = "" . ($time_seg[5] + 1900) . (sprintf("%02d", ($time_seg[4] + 1))) . (sprintf("%02d", $time_seg[3]));
 my $yesterday_str = "" . ($time_seg[5] + 1900) . '-' . (sprintf("%02d", ($time_seg[4] + 1))) . '-' . (sprintf("%02d", $time_seg[3])) . ' ' . (sprintf("%02d", ($time_seg[2]))) . ':' . (sprintf("%02d", ($time_seg[1]))) . ':' . (sprintf("%02d", ($time_seg[1])));
 
-my $imas_log = "/home/work/imas/log/imas.log." . $yesterday . "*";
-my $imas_log_wf = "/home/work/imas/log/imas.log.wf." . $yesterday;
+my $imbs_log;
+my $imbs_log_wf;
+
+my $ns = 0;
+
+if (-e "/home/work/nsimbs" && -l "/home/work/nsimbs") {
+    $ns = 1;
+    $imbs_log = "/home/work/nsimbs/log/imbs.log." . $yesterday . "*";
+    $imbs_log_wf = "/home/work/nsimbs/log/imbs.log.wf." . $yesterday;
+} else {
+    $imbs_log = "/home/work/imbs/log/imbs.log." . $yesterday . "*";
+    $imbs_log_wf = "/home/work/imbs/log/imbs.log.wf." . $yesterday;
+}
 
 eval {
-    `mkdir -p /home/work/opbin/noah_stat/output`
+    `mkdir -p /home/work/opbin/noah_stat/output && chmod 755 /home/work/opbin/noah_stat/output`
 };
 
 exit 1 if $@;
@@ -25,116 +36,49 @@ exit 1 if $@;
 open my $predictor_output, ">", "/home/work/opbin/noah_stat/output/predictor.$yesterday" or croak "$!\n";
 
 open my $predictor_wf, ">", "/home/work/opbin/noah_stat/predictor.wf" or croak "$!\n";
-open my $predictor_pc, ">", "/home/work/opbin/noah_stat/predictor.pc" or croak "$!\n";
-open my $predictor_wise, ">", "/home/work/opbin/noah_stat/predictor.wise" or croak "$!\n";
+open my $predictor, ">", "/home/work/opbin/noah_stat/predictor" or croak "$!\n";
 
-my @imas_logs = bsd_glob($imas_log);
+my @imbs_logs = bsd_glob($imbs_log);
 
-open my $imas_log_fd, "<", $imas_log_wf or carp "$!\n";
-if (fileno $imas_log_fd) {
-    while (my $line = <$imas_log_fd>) {
-        chomp $line;
-        if ($line =~ m/predictor_api\ talk\ to\ server\ error|received\ error\ pack\ from\ predictor,\ err_code\(2004\)/x) {
-            print $predictor_wf $line . "\n";
-         }
-    }
+open my $imbs_log_fd, "<", $imbs_log_wf or croak "$!\n";
+while (my $line = <$imbs_log_fd>) {
+    chomp $line;
+    if ($line =~ m/predictor_api\ talk\ to\ server\ error|received\ error\ pack\ from\ predictor,\ err_code\(2004\)/x) {
+        print $predictor_wf $line . "\n";
+     }
 }
 print $predictor_wf "\n";
 
 
-my $imas_predictor = 0;
-
-for my $file (@imas_logs) {
+for my $file (@imbs_logs) {
     open my $fd, "<", $file or croak "$!\n";
-    if (fileno $fd) {
-        while (my $line = <$fd>) {
-            chomp $line;
-            my $wise = 0;
-            if ($line =~ m/ws=1/x) {
-                $wise = 1
-            }
+    while (my $line = <$fd>) {
+        chomp $line;
 
-            if ($line =~ m/qspn=(\d+)/x) {
-                $imas_predictor += $1;
-            }
-
-            my $qs_kpi = '';
-            if ($line =~ m/qs_kpi=([^\ ]+)\ /x) {
-                $qs_kpi = $1;
-            }
-
-            my $ovlexp = '';
-            if ($line =~ m/ovlexp=([^\ ]+)\ /x) {
-                $ovlexp = $1;
-            }
-
-            if ($wise) {
-                print $predictor_wise "qs_kpi:" . $qs_kpi . " " . "ovlexp:" . $ovlexp, "\n";
-            } else {
-                print $predictor_pc "qs_kpi:" . $qs_kpi . " " . "ovlexp:" . $ovlexp, "\n";
-            }
+        my $qs_kpi = '';
+        if ($line =~ m/qs=([^\ ]+)\ /x) {
+            $qs_kpi = $1;
         }
+
+        print $predictor "qs_kpi:" . $qs_kpi, "\n";
     }
 }
 
-print $predictor_wise "\n";
-print $predictor_pc "\n";
+print $predictor "\n";
 
 
 my %ovlexp = ();
 
-#$ovlexp{'120-0'} = 'D0AS';
-#$ovlexp{'206L-10001'}='D1AS';
-#$ovlexp{'206L-10002'}='D2AS';
-#$ovlexp{'120-3'}='D3AS';
-#$ovlexp{'120-4'}='D4AS';
-#$ovlexp{'120-5'}='D5AS';
-#$ovlexp{'206L-10003'}='D6AS';
-#$ovlexp{'120-7'}='D7AS';
-#$ovlexp{'120-8'}='D8AS';
-#$ovlexp{'120-9'}='D9AS';
-#$ovlexp{'121-0'}='D0BS';
-#$ovlexp{'121-1'}='D1BS';
-#$ovlexp{'121-2'}='D2BS';
-#$ovlexp{'121-3'}='D3BS';
-#$ovlexp{'122-0'}='D0CS';
-#$ovlexp{'122-1'}='D1CS';
-#$ovlexp{'122-2'}='D2CS';
-#$ovlexp{'122-3'}='D3CS';
-#$ovlexp{'122-4'}='D4CS';
-#$ovlexp{'122-5'}='D5CS';
-$ovlexp{'207L-1010'}='D1CLKQS';
-$ovlexp{'207L-1011'}='D0CLKQS';
-$ovlexp{'387-0'}='D0ASQ';
-$ovlexp{'387-1'}='D1ASQ';
-$ovlexp{'207L-2'}='D2ASQ';
-$ovlexp{'207L-3'}='D3ASQ';
-$ovlexp{'207L-4'}='D4ASQ';
-$ovlexp{'207L-5'}='D5ASQ';
-$ovlexp{'207L-6'}='D6ASQ';
-$ovlexp{'207L-7'}='D7ASQ';
-$ovlexp{'207L-8'}='D8ASQ';
-$ovlexp{'207L-10'}='D10ASQ';
-$ovlexp{'247L-0'}='D0WASQ';
-$ovlexp{'247L-1'}='D1WASQ';
-$ovlexp{'247L-2'}='D2WASQ';
-$ovlexp{'247L-3'}='D3WASQ';
-$ovlexp{'247L-4'}='D4WASQ';
-$ovlexp{'247L-5'}='D5WASQ';
-$ovlexp{'247L-6'}='D6WASQ';
-$ovlexp{'527-7'}='D7WASQ';
-
 close $predictor_wf;
-close $predictor_wise;
-close $predictor_pc;
+close $predictor;
 
 open $predictor_wf, "<", "/home/work/opbin/noah_stat/predictor.wf" or croak "$!\n";
-open $predictor_pc, "<", "/home/work/opbin/noah_stat/predictor.pc" or croak "$!\n";
-open $predictor_wise, "<", "/home/work/opbin/noah_stat/predictor.wise" or croak "$!\n";
+open $predictor, "<", "/home/work/opbin/noah_stat/predictor" or croak "$!\n";
 
 my %exp_total = ();
 my %exp_failed_total = ();
 my $havest_loss = 0;
+my $imbs_predictor = 0;
 
 my %exp_total_coarse = ();
 my %exp_failed_total_coarse = ();
@@ -149,212 +93,58 @@ map {
     my $exp = $_;
     $exp_total{$exp} = 0;
     $exp_failed_total{$exp} = 0;
-} qw(WASQ ASQ CLKQS LRQ RIGQ);
+} qw(QS IDEAQ WIDEAQ);
 
 map {
     my $exp = $_;
     $exp_total_coarse{$exp} = 0;
     $exp_failed_total_coarse{$exp} = 0;
-} qw(WASQ ASQ CLKQS LRQ RIGQ);
+} qw(QS IDEAQ WIDEAQ);
 
-while (my $line = <$predictor_wise>) {
+while (my $line = <$predictor>) {
     chomp $line;
-
-    my $qs_kpi;
-    my $ovlexp;
-    my @segs;
-
-    my @exps = ();
-
-    if ($line =~ m/qs_kpi:(\S+)\ ovlexp:(.*)$/xms) {
-        $qs_kpi = $1;
-        $ovlexp = $2;
-
-        @segs = split(/#/, $ovlexp);
-        if (@segs && scalar(@segs) > 0) {
-            for my $seg (@segs) {
-                if (exists $ovlexp{$seg}) {
-                    push @exps, $ovlexp{$seg};
-                }
-            }
-        }
-
-        $qs_kpi =~ s/\(|\)/ /g;
-
-        @segs = split(/ /, $qs_kpi);
-        if (@segs && scalar(@segs) > 0) {
-            for my $seg (@segs) {
-                next if $seg eq '';
-                next if $seg =~ m/ /;
-
-                if ($seg =~ m/(\d+)\|(\d+)\|(\d+)/xms) {
-                    my $x = $1;
-                    my $y = $2;
-                    my $z = $3;
-
-                    #wasq
-                    my $exp;
-
-                    if ($x == '0' || $x == '1' || $x == '3' || $x == '4' || $x == '6') {
-                        if ($ovlexp eq '') {
-                            $exp = 'WASQ';
-                            $exp_total{$exp} = $exp_total{$exp} + $y;
-                        } else {
-                            $exp = first { $_ =~ m/WASQ$/x } @exps;
-                            if (defined $exp) {
-                                $exp_total{$exp} = $exp_total{$exp} + $y;
-                            } else {
-                                $exp = 'WASQ';
-                                $exp_total{$exp} = $exp_total{$exp} + $y;
-                            }
-                        }
-                    } elsif ($x == '2') {
-                        if ($ovlexp eq '') {
-                            $exp = 'CLKQS';
-                            $exp_total{$exp} = $exp_total{$exp} + $y;
-                        } else {
-                            $exp = first { $_ =~ m/CLKQS$/x } @exps;
-                            if (defined $exp) {
-                                $exp_total{$exp} = $exp_total{$exp} + $y;
-                            } else {
-                                $exp = 'CLKQS';
-                                $exp_total{$exp} = $exp_total{$exp} + $y;
-                            }
-                        }
-                    } elsif ($x == '5') {
-                        if ($ovlexp eq '') {
-                            $exp = 'RIGQ';
-                            $exp_total{$exp} = $exp_total{$exp} + $y;
-                        } else {
-                            $exp = first { $_ =~ m/RIGQ$/x } @exps;
-                            if (defined $exp) {
-                                $exp_total{$exp} = $exp_total{$exp} + $y;
-                            } else {
-                                $exp = 'RIGQ';
-                                $exp_total{$exp} = $exp_total{$exp} + $y;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-
-while (my $line = <$predictor_pc>) {
-    chomp $line;
-
-    my $qs_kpi;
-    my $ovlexp;
-    my @segs;
-
-    my @exps = ();
-
-    if ($line =~ m/qs_kpi:(\S+)\ ovlexp:(.*)$/xms) {
-        $qs_kpi = $1;
-        $ovlexp = $2;
-
-        @segs = split(/#/, $ovlexp);
-        if (@segs && scalar(@segs) > 0) {
-            for my $seg (@segs) {
-                if (exists $ovlexp{$seg}) {
-                    push @exps, $ovlexp{$seg};
-                }
-            }
-        }
-
-        $qs_kpi =~ s/\(|\)/ /g;
-
-        @segs = split(/ /, $qs_kpi);
-        if (@segs && scalar(@segs) > 0) {
-            for my $seg (@segs) {
-                next if $seg eq '';
-                next if $seg =~ m/ /;
-
-                if ($seg =~ m/(\d+)\|(\d+)\|(\d+)/xms) {
-                    my $x = $1;
-                    my $y = $2;
-                    my $z = $3;
-
-                    #asq
-                    my $exp;
-
-                    if ($x == '0') {
-                        if ($ovlexp eq '') {
-                            $exp = 'ASQ';
-                            $exp_total{$exp} = $exp_total{$exp} + $y;
-                        } else {
-                            $exp = first { $_ =~ m/ASQ$/x } @exps;
-                            if (defined $exp) {
-                                $exp_total{$exp} = $exp_total{$exp} + $y;
-                            } else {
-                                $exp = 'ASQ';
-                                $exp_total{$exp} = $exp_total{$exp} + $y;
-                            }
-                        }
-                    } elsif ($x == '1') {
-                        if ($ovlexp eq '') {
-                            $exp = 'CLKQS';
-                            $exp_total{$exp} = $exp_total{$exp} + $y;
-                        } else {
-                            $exp = first { $_ =~ m/CLKQS$/x } @exps;
-                            if (defined $exp) {
-                                $exp_total{$exp} = $exp_total{$exp} + $y;
-                            } else {
-                                $exp = 'CLKQS';
-                                $exp_total{$exp} = $exp_total{$exp} + $y;
-                            }
-                        }
-                    } elsif ($x == '3') {
-                        if ($ovlexp eq '') {
-                            $exp = 'LRQ';
-                            $exp_total{$exp} = $exp_total{$exp} + $y;
-                        } else {
-                            $exp = first { $_ =~ m/LRQ$/x } @exps;
-                            if (defined $exp) {
-                                $exp_total{$exp} = $exp_total{$exp} + $y;
-                                #$exp_failed_total{$exp} = $exp_failed_total{$exp} + $z;
-                            } else {
-                                $exp = 'LRQ';
-                                $exp_total{$exp} = $exp_total{$exp} + $y;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    if ($line =~ m/qs_kpi:\(\d+\|\d+\)\(\d+\|\d+\)\(\d+\|\d+\|\d+\)\((\d+)\)/) {
+        my $count = $1;
+        my $exp = 'QS';
+        $exp_total{$exp} = (exists $exp_total{$exp} ? $exp_total{$exp} : 0) + $count;
+        $imbs_predictor += $count;
     }
 }
 
 while (my $line = <$predictor_wf>) {
     chomp $line;
-
     $havest_loss += 1 if $line =~ m/received\ error\ pack\ from\ predictor,\ err_code\(2004\)/xms;
-
-    if ($line =~ m/predictor_api\ talk\ to\ server\ error.*service_name\(([0-9a-zA-Z\_]+)_group0\)/xms) {
-        my $exp = $1;
-        $exp =~ s/n//xms;
-        $exp =~ s/_//xms;
-        $exp = uc $exp;
-        $exp_failed_total{$exp} = (exists $exp_failed_total{$exp} ? $exp_failed_total{$exp} : 0) + 1;
+    if ($ns) {
+        if ($line =~ m/predictor_api\ talk\ to\ server\ error/xms) {
+            my $exp = "QS";
+            $exp_failed_total{$exp} = (exists $exp_failed_total{$exp} ? $exp_failed_total{$exp} : 0) + 1;
+        }
+    } else {
+        if ($line =~ m/predictor_api\ talk\ to\ server\ error.*service_name\(([0-9a-zA-Z\_]+)_group(\d+)\)/xms) {
+            my $exp = $1;
+            $exp =~ s/n//xms;
+            $exp =~ s/_//xms;
+            $exp = uc $exp;
+            $exp_failed_total{$exp} = (exists $exp_failed_total{$exp} ? $exp_failed_total{$exp} : 0) + 1;
+        }
     }
 }
+
 
 print $predictor_output $yesterday_str . "\t";
 
 map {
     my $exp = $_;
-    print $predictor_output "IMAS_$exp" . ":" . $exp_total{$exp}, "\t";
+    print $predictor_output "IMBS_$exp" . ":" . $exp_total{$exp}, "\t";
 } keys %exp_total;
 
 map {
     my $exp = $_;
-    print $predictor_output "IMAS_$exp" . "_FAILED:" . $exp_failed_total{$exp}, "\t";
+    print $predictor_output "IMBS_$exp" . "_FAILED:" . $exp_failed_total{$exp}, "\t";
 } keys %exp_failed_total;
 
-print $predictor_output "IMAS_PREDICTOR" . ":" . $imas_predictor, "\t";
-print $predictor_output "IMAS_HAVEST" . "_LOSS:" . $havest_loss, "\t";
+print $predictor_output "IMBS_PREDICTOR" . ":" . $imbs_predictor, "\t";
+print $predictor_output "IMBS_HAVEST" . "_LOSS:" . $havest_loss, "\t";
 
 print $predictor_output "\n";
 
