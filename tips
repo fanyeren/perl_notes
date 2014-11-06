@@ -7,3 +7,10 @@ cat logflow/output/*_imas_imbs | perl -lne 'if ($_ =~ /IMAS_BS_SINGLE_GROUP_FAIL
 cat imbs.log.wf | perl -lne 'if ($_=~ m/( \d+:\d+:\d+: ).*predictor_api talk to server error, server_ip\((\d+\.\d+\.\d+\.\d+)\)/){print $1, " ", $2}' | sort | uniq -c | sort -n
 
 cat /home/work/imas/log/imas.log.wf | perl -lne 'if ($_ =~ /.*talk\ to\ server\ error.*service_name\((\S+)\)/) {print $1}' | sort | uniq -c | sort -n
+
+
+ls -at
+ls -art
+
+ls -rt
+ls -Sr
