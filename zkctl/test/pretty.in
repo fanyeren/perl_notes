@@ -1,0 +1,65 @@
+#!/bin/bash
+source $(dirname $0)/common
+
+raw='{"name":"hjz","age":12,"version":{"v1":2},"inst":[1,2,3]}'
+#cluster
+./zkctl -s cluster set-meta-all --data=$raw
+./zkctl -s cluster get-meta-all --pretty
+echo "get cluster meta all result=$?"
+
+function test_pretty()
+{
+    local TYPE;
+    TYPE=$1
+    ID=$2
+    ./zkctl -s $TYPE add --$TYPE-id=$ID --data=$raw
+    ./zkctl -s $TYPE get-meta-all --$TYPE-id=$ID --pretty
+    echo "Getting $TYPE $ID meta pretty result=$?"
+}
+node_clear group
+node_clear idc
+node_clear index-partition
+node_clear index-type
+
+#idc 
+test_pretty idc jx
+#group
+test_pretty group group_0
+#index-type
+test_pretty index-type wdnb
+#index-partition
+test_pretty index-partition wdnb_9
+
+node_clear index-partition
+node_clear index-type
+node_clear group
+node_clear idc
+
+#slavenode service service-instance
+#[[[[[[[[[[[[[
+./zkctl -s slavenode add --slavenode-id=hjz --data=$raw
+./zkctl -s service add --service-id=hjz --data=$raw
+ID=$(./zkctl -s service-instance add --service-id=hjz --slavenode-id=hjz --data=$raw)
+
+./zkctl -s slavenode get-meta-all --slavenode-id=hjz --pretty
+echo "get slavenode meta result=$?"
+./zkctl -s service get-meta-all --service-id=hjz --pretty
+echo "get service meta result=$?"
+./zkctl -s service-instance get-meta-all --service-instance-id=$ID --pretty
+echo "get service instance meta result=$?"
+
+./zkctl -s service set-default-planned-state-all --service-id=hjz --data=$raw
+./zkctl -s service get-default-planned-state-all --service-id=hjz --pretty
+echo "get service state result=$?"
+./zkctl -s service-instance set-planned-state-all --service-instance-id=$ID --data=$raw
+./zkctl -s service-instance get-planned-state-all --service-instance-id=$ID --pretty
+echo "get service isntance state result=$?"
+./zkctl -s service-instance set-current-state-all --service-instance-id=$ID --data=$raw
+./zkctl -s service-instance get-current-state-all --service-instance-id=$ID --pretty
+echo "get service instance current state result=$?"
+
+./zkctl -s service-instance del --service-instance-id=$ID
+./zkctl -s slavenode del --slavenode-id=hjz
+./zkctl -s service del --service-id=hjz
+#]]]]]]]]]]]]]
+

@@ -1,0 +1,53 @@
+#!/bin/bash
+./zkctl -s cluster set-meta-all --data={}
+
+raw='"deploy_service":"100","deploy_dyndata":"100"'
+
+function  clear_sema()
+{
+    for item in `echo $raw|tr -s "," " "`; do
+        rawkv=`echo $item|tr -d \" |tr -s ":" " "`
+        kv=($rawkv)
+        ./zkctl -s cluster destroy-semaphore --key=${kv[0]}
+        echo "destroy semaphore ${kv[0]}=${kv[1]} result=$?"
+    done
+}
+
+function add_sema()
+{
+    for item in `echo $raw|tr -s "," " "`; do
+        rawkv=`echo $item|tr -d \" | tr -s ":" " "`
+        kv=($rawkv)
+        ./zkctl -s cluster create-semaphore --key=${kv[0]} --resource-num=${kv[1]}
+        echo "creaet semaphore ${kv[0]} result=$?"
+    done
+}
+
+function get_sema()
+{
+    for item in `echo $raw|tr -s "," " "`; do
+        rawkv=`echo $item|tr -d \" | tr -s ":" " "`
+        kv=($rawkv)
+        ./zkctl -s cluster get-semaphore-resource-num --key=${kv[0]}
+        echo "get semaphore ${kv[0]}=${kv[1]}  result=$?"
+        ./zkctl -s cluster set-semaphore-resource-num --key=${kv[0]} --resource-num=0
+        echo "semaphore changed:"
+        ./zkctl -s cluster get-semaphore-resource-num --key=${kv[0]}
+    done
+}
+echo "clear semaphore..."
+clear_sema &> /dev/null
+echo "semaphore cleared"
+./zkctl -s cluster list-semaphore
+echo "adding sema"
+add_sema
+echo "semaphore added"
+./zkctl -s cluster list-semaphore
+echo "semaphore checking..."
+get_sema
+echo "semaphore checked"
+./zkctl -s cluster list-semaphore
+echo "clear semaphore..."
+clear_sema
+echo "semaphore cleared"
+./zkctl -s cluster list-semaphore

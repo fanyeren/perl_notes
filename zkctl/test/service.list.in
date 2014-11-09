@@ -1,0 +1,20 @@
+#!/bin/bash
+source $(dirname $0)/common
+
+TYPE=service
+node_clear $TYPE
+
+./zkctl -w $TYPE add --$TYPE-id=bs_dnews_1 --data={}
+echo "add result=$?"
+./zkctl -w $TYPE add --$TYPE-id=bs_wp_2 --data={}
+echo "add result=$?"
+./zkctl -w $TYPE add --$TYPE-id=bs_vip_0 --data={}
+echo "add result=$?"
+./zkctl -w $TYPE add --$TYPE-id=bc_group_1 --data={}
+echo "add result=$?"
+./zkctl -w $TYPE list | sort
+echo "list result=$?"
+./zkctl -w $TYPE del --$TYPE-id=bs_wp_2 
+echo "del result=$?"
+./zkctl -w $TYPE list | sort
+echo "list result=$?"

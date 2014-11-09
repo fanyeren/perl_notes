@@ -1,0 +1,33 @@
+{
+    "note": {
+        "dest": {
+            "m1": "vip1 vip2 se1",
+            "m2": "vip1      se2",
+            "m3": "vip1 vip2 se3",
+            "m4": "vip2      se4"
+        },
+        "case": "a machine is down",
+        "situation": "m2 is down",
+        "action": "move instance to other machine: vip1 to m4(ADD), se2 to m1(ADD)"
+    },
+	"index_partition" : {
+		"vip_1" : {"group":"group_1","index_layer":"layer1","index_type":"vip","replication_factor":"3"},
+		"vip_2" : {"group":"group_1","index_layer":"layer1","index_type":"vip","replication_factor":"3"},
+		"se_1" : {"group":"group_1","index_layer":"layer1","index_type":"se","replication_factor":"1"},
+		"se_2" : {"group":"group_1","index_layer":"layer1","index_type":"se","replication_factor":"1"},
+		"se_3" : {"group":"group_1","index_layer":"layer1","index_type":"se","replication_factor":"1"},
+		"se_4" : {"group":"group_1","index_layer":"layer1","index_type":"se","replication_factor":"1"}
+	},
+	"slavenode" : {
+		"m1" : {"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"\/home\/","failure_domain":"failure_domain_2","flash_capacity":"640G","flash_path":"\/ssd1\/","group":"group_1","idc":"jx","online_state":"online","safe-mode":"off","work_path":"\/home\/work\/search\/"},
+		"m2" : {"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"\/home\/","failure_domain":"failure_domain_2","flash_capacity":"640G","flash_path":"\/ssd1\/","group":"group_1","idc":"jx","online_state":"offline","safe-mode":"off","work_path":"\/home\/work\/search\/"},
+		"m3" : {"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"\/home\/","failure_domain":"failure_domain_1","flash_capacity":"640G","flash_path":"\/ssd1\/","group":"group_1","idc":"jx","online_state":"online","safe-mode":"off","work_path":"\/home\/work\/search\/"},
+		"m4" : {"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"\/home\/","failure_domain":"failure_domain_1","flash_capacity":"640G","flash_path":"\/ssd1\/","group":"group_1","idc":"jx","online_state":"online","safe-mode":"off","work_path":"\/home\/work\/search\/"}
+	},
+	"placement" : {
+		"m1" : [{"partition":"vip_1", "service_port":"-1","state":"RUNNING"}, {"partition":"vip_2", "service_port":"-1","state":"RUNNING"}, {"partition":"se_1", "service_port":"-1","state":"RUNNING"}],
+		"m2" : [{"partition":"vip_1", "service_port":"-1","state":"RUNNING"}, {"partition":"se_2",  "service_port":"-1","state":"RUNNING"}],
+		"m3" : [{"partition":"vip_1", "service_port":"-1","state":"NEW"},     {"partition":"vip_2", "service_port":"-1","state":"RUNNING"}, {"partition":"se_3", "service_port":"-1","state":"NEW"}],
+		"m4" : [{"partition":"vip_2", "service_port":"-1","state":"RUNNING"}, {"partition":"se_4",  "service_port":"-1","state":"NEW"}]
+	}
+}

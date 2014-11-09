@@ -1,0 +1,37 @@
+#!/bin/bash
+source $(dirname $0)/common
+TYPE=index-type
+VALUE=dnews
+raw='"category":"manual","deployment_next_partition":"1","deployment_policy":"full","layer":"layer1","partition_count":"20","replication_factor":"2","resource_requirement":"io-bound","trans_db_priority":"2"'
+
+node_clear $TYPE
+
+./zkctl -w $TYPE add --$TYPE-id=$VALUE --data='{'$raw'}'
+./zkctl -w $TYPE get-meta-all --$TYPE-id=$VALUE
+node_clear $TYPE
+./zkctl -w $TYPE add --$TYPE-id=$VALUE --data={}
+./zkctl -w $TYPE get-meta-all --$TYPE-id=$VALUE
+
+for item in `echo $raw|tr -s "," " "`; do
+    rawkv=`echo $item|tr -d \" | tr -s ":" " "`
+    kv=($rawkv)
+    ./zkctl -w $TYPE add-meta-attr --$TYPE-id=$VALUE --key=${kv[0]} --value=${kv[1]}
+    echo "Add meta ${kv[0]}=${kv[1]} result $?"
+    ./zkctl -w $TYPE get-meta-attr --$TYPE-id=$VALUE --key=${kv[0]}
+    echo "Get meta ${kv[0]}=${kv[1]} result $?"
+done
+
+./zkctl -w $TYPE get-meta-all --$TYPE-id=$VALUE
+echo "got all $TYPE result result=$?"
+
+for item in `echo $raw|tr -s "," " "`; do
+    rawkv=`echo $item|tr -d \" | tr -s ":" " "`
+    kv=($rawkv)
+    ./zkctl -w $TYPE del-meta-attr --$TYPE-id=$VALUE --key=${kv[0]}
+    echo "del meta attr ${kv[0]} result=$?"
+done
+
+./zkctl -w $TYPE get-meta-all --$TYPE-id=$VALUE
+echo "got empty $TYPE result result=$?"
+
+./zkctl -w $TYPE del --$TYPE-id=$VALUE

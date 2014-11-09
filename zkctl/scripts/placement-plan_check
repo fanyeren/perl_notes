@@ -1,0 +1,64 @@
+#! /bin/bash
+
+PROGNAME=${0##*/} 
+
+function usage() 
+{ 
+cat <<EOF 
+Check index placement achieved or not.
+
+Usage: ${PROGNAME} [-i|--slavenode-id=SLAVENODE_ID] [-v|--verbose]
+       ${PROGNAME} -h|--help
+
+Options: 
+EOF
+cat <<EOF | column -s\& -t 
+    -i|--slavenode-id & slavenode-id. Will read slavenode-id list from stdin if this option is not specified
+    -v|--verbose & show verbose messages
+    -h|--help & show this help 
+EOF
+echo
+} 
+
+
+## parse arguments and options
+SHORTOPTS="i:vh"
+LONGOPTS="slavenode-id:,verbose,help"
+
+TEMP=`getopt --options ${SHORTOPTS} --longoptions ${LONGOPTS} --name ${PROGNAME} -- "$@"`
+[ $? -ne 0 ] &&	usage && exit 1
+
+eval set -- "${TEMP}"
+VERBOSE=0
+while true ; do
+	case "$1" in
+		-i|--slavenode-id) SLAVENODE_ID="$2"; shift 2;;
+		-v|--verbose) VERBOSE=1; shift 1;;
+		-h|--help) usage; exit 0;;
+		--) shift ; break ;;
+		*) usage; exit 1 ;;
+	esac
+done
+
+if [ "x${SLAVENODE_ID}" != "x" ]; then
+	SLAVENODE_LIST=${SLAVENODE_ID}
+else
+	SLAVENODE_LIST=`cat`
+fi
+
+
+## start working
+source "public.inc"
+RET_CODE=0
+
+for NODE in ${SLAVENODE_LIST}; do
+	SERVICE_INSTANCE_LIST=$(${ZKCTL_BIN} slavenode list-service-instance --slavenode-id=${NODE})
+	[ $? -ne 0 ] && echo "get service instance list failed! ${NODE}" && RET_CODE=1
+	for INSTANCE in ${SERVICE_INSTANCE_LIST}; do
+		UP_DOWN_STATE=$(${ZKCTL_BIN} service-instance get-current-state-attr --service-instance-id=${INSTANCE} --key="up_down_state")
+		[ $? -ne 0 ] && echo "${NODE} ${INSTANCE} not exist." && RET_CODE=1
+		[ "x${UP_DOWN_STATE}" != "xup" ] && echo "${NODE} ${INSTANCE} down." && RET_CODE=1
+	done
+done
+
+exit ${RET_CODE}

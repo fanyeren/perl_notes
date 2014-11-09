@@ -1,0 +1,6 @@
+add result 0
+off
+get result=0
+set result=0
+on
+get result=0

@@ -1,0 +1,14 @@
+{"last_sync_time":"201202131117","lowest_ratio_of_up_service_instances":"66"}
+{}
+Add meta last_sync_time=201202131117 result 0
+201202131117
+Get meta last_sync_time=201202131117 result 0
+Add meta lowest_ratio_of_up_service_instances=66 result 0
+66
+Get meta lowest_ratio_of_up_service_instances=66 result 0
+{"last_sync_time":"201202131117","lowest_ratio_of_up_service_instances":"66"}
+got all service result result=0
+del meta attr last_sync_time result=0
+del meta attr lowest_ratio_of_up_service_instances result=0
+{}
+got empty service result result=0

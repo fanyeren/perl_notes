@@ -1,0 +1,251 @@
+#! /bin/bash
+
+PROGNAME=${0##*/} 
+
+function usage() 
+{ 
+cat <<EOF 
+Commit a placement plan to zookeeper.
+
+Usage: ${PROGNAME} 
+       ${PROGNAME} -h|--help
+
+Options: 
+EOF
+cat <<EOF | column -s\& -t 
+    -h|--help & show this help 
+EOF
+echo
+} 
+
+
+
+## parse arguments and options
+SHORTOPTS="h"
+LONGOPTS="help"
+
+TEMP=`getopt --options ${SHORTOPTS} --longoptions ${LONGOPTS} --name ${PROGNAME} -- "$@"`
+[ $? -ne 0 ] &&	usage && exit 1
+
+eval set -- "$TEMP"
+while true ; do
+	case "$1" in
+		-h|--help) usage; exit 0;;
+		--) shift ; break ;;
+		*) usage; exit 1 ;;
+	esac
+done
+
+
+## start working
+source "public.inc"
+
+
+function add_service_instance_to_noah()
+{
+    if [ -x ${NOAH_OP_SERVICE_INSTANCE} ]; then
+        NOAH_RET=$(${NOAH_OP_SERVICE_INSTANCE} add "$1" 2>&1)
+        log_msg "$1 add to noah node result $? msg ${NOAH_RET}"
+    else
+        log_err "${NOAH_OP_SERVICE_INSTANCE} not exists"
+    fi
+}
+function delete_service_instance_from_noah()
+{
+    if [ -x ${NOAH_OP_SERVICE_INSTANCE} ]; then
+        NOAH_RET=$(${NOAH_OP_SERVICE_INSTANCE} del "$1" 2>&1)
+        log_msg "$1 delete from noah node result $? msg ${NOAH_RET}"
+    else
+        log_err "${NOAH_OP_SERVICE_INSTANCE} not exists"
+    fi
+}
+function start_service_instance()
+{
+    local SERVICE_INSTANCE_ID="$1"
+
+    # start service instance
+    ${ZKCTL_BIN} service-instance set-meta-attr --service-instance-id="${SERVICE_INSTANCE_ID}" --key=state --value=RUNNING
+    [ $? -ne 0 ] && log_err "${SERVICE_INSTANCE_ID} set meta attribute failed." && exit 1
+
+    add_service_instance_to_noah "${SERVICE_INSTANCE_ID}"
+
+    log_msg "${SERVICE_INSTANCE_ID} transfer from NEW to RUNNING"
+
+    return 0
+}
+
+function delete_service_instance()
+{
+	local SERVICE_INSTANCE_ID="$1"
+
+    delete_service_instance_from_noah "${SERVICE_INSTANCE_ID}"
+    
+	# delete service instance
+	${ZKCTL_BIN} service-instance del --service-instance-id=${SERVICE_INSTANCE_ID}
+	[ $? -ne 0 ] && log_msg "${SERVICE_INSTANCE_ID} delete failed." && return 1
+
+    log_msg "${SERVICE_INSTANCE_ID} successfuly deleted"
+
+	return 0
+}
+function mark_deletable()
+{
+    local PARTITION="$1"
+    local SERVICE_INSTANCE_LIST=$(${ZKCTL_BIN} job get-meta-keys --job-id=plan_del)
+    for INSTANCE in ${SERVICE_INSTANCE_LIST}; do
+        PARTITION_id=$(${ZKCTL_BIN} job get-meta-attr --job-id=plan_del --key="${INSTANCE}")
+        [ $? -ne 0 ] && log_err "${INSTANCE} of plan_del get partition failed." && exit 1
+        if [ "x${PARTITION_ID}" == "x${PARTITION}" ]; then
+            ${ZKCTL_BIN} job set-meta-attr --job-id=plan_del --key="${INSTANCE}" --value=del
+            [ $? -ne 0 ] && log_err "${INSTANCE} of plan_del set partition to del failed." && exit 1
+            log_msg "${INSTANCE} is marked deletable, because it's partition is ${PARTITION_ID}"
+        fi
+    done
+}
+function reset_new_layer()
+{
+    ${ZKCTL_BIN} job add --job-id=plan_newlayer --data='{}' 2>/dev/null
+    ${ZKCTL_BIN} job set-meta-all --job-id=plan_newlayer --data='{}'
+}
+function is_new_layer()
+{
+    local PARTITION="$1"
+    local MYGROUP=$(${ZKCTL_BIN} index-partition get-meta-attr --index-partition-id="${PARTITION}" --key=group)
+    local CHECK_RET=$(./connection_check ${MYGROUP} ${PARTITION})
+    if [ "xnew" == "x${CHECK_RET}" ]; then
+        return 0
+    elif [ "xold" == "x${CHECK_RET}" ]; then
+        return 1
+    else
+        log_err "connection check ${MYGROUP} ${PARTITION} failed." && exit 1
+    fi
+}
+function mark_if_new_layer()
+{
+    local PARTITION="$1"
+    local INSTANCE="$2"
+    is_new_layer ${PARTITION}
+    if [ $? -eq 0 ]; then
+        ${ZKCTL_BIN} job add-meta-attr --job-id=plan_newlayer --key=${PARTITION} --value=hjz 2>/dev/null
+        log_msg "${PARTITION} is new layer and ${INSTANCE} is not up"
+    fi
+}
+function is_all_new_layer_ok()
+{
+    local TODO_LAYER=$(${ZKCTL_BIN} job get-meta-keys --job-id=plan_newlayer)
+    if [ "x${TODO_LAYER}" == "x" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+function rm_job_list_add()
+{
+    local INSTANCE="$1"
+    local PARTITION="$2"
+    ${ZKCTL_BIN} job del-meta-attr --job-id=plan_add --key="${INSTANCE}"
+    [ $? -ne 0 ] && log_err "${INSTANCE} delete from plan_add failed." && exit 1
+
+    #output group, for update connection.
+    ${ZKCTL_BIN} index-partition get-meta-attr --index-partition-id="${PARTITION}" --key=group
+    [ $? -ne 0 ] && log_err "${PARTITION} get meta attr of group failed." && exit 1
+}
+function rm_job_list_del()
+{
+    local INSTANCE="$1"
+    ${ZKCTL_BIN} job del-meta-attr --job-id=plan_del --key="${INSTANCE}"
+    [ $? -ne 0 ] && log_err "${INSTANCE} delete from plan_del failed." && exit 1
+
+    local SERVICE=$(${ZKCTL_BIN} service-instance get-meta-attr --service-instance-id="${INSTANCE}" --key=service_id)
+    [ $? -ne 0 ] && log_err "${INSTANCE} get attr service_id failed." && exit 1
+
+    local PARTITION=${SERVICE#bs_}
+    #output group, for update connection.
+    ${ZKCTL_BIN} index-partition get-meta-attr --index-partition-id="${PARTITION}" --key=group
+    [ $? -ne 0 ] && log_err "${PARTITION} get meta attr of group failed." && exit 1
+}
+function check_service_instance_is_valid()
+{
+    local INSTANCE="$1"
+    local VALID=$(${ZKCTL_BIN} service-instance isvalid --service-instance-id=${INSTANCE})
+    [ $? -ne 0 ] && log_err "${INSTANCE} isvalid failed" && exit 1
+    if [ "$VALID" == "valid" ]; then
+        return 0
+    else
+        log_err "${INSTANCE} in job is invalid, rm from plan"
+        ${ZKCTL_BIN} job del-meta-attr --job-id=plan_del --key="${INSTANCE}" 2>/dev/null
+        ${ZKCTL_BIN} job del-meta-attr --job-id=plan_add --key="${INSTANCE}" 2>/dev/null
+        return 1
+    fi
+}
+
+#reset new layer
+reset_new_layer
+
+#delete tobedeleted
+DEL_SERVICE_INSTANCE_LIST=$(${ZKCTL_BIN} job get-meta-keys --job-id=plan_del)
+SERVICE_INSTANCE_LIST=$(${ZKCTL_BIN} job get-meta-keys --job-id=plan_add)
+for INSTANCE in ${DEL_SERVICE_INSTANCE_LIST}; do
+    check_service_instance_is_valid ${INSTANCE}
+    [ $? -ne 0 ] && continue
+    PARTITION_ID=$(${ZKCTL_BIN} job get-meta-attr --job-id=plan_del --key="${INSTANCE}")
+	[ $? -ne 0 ] && log_err "${INSTANCE} get meta attribute failed." && exit 1
+    if [ "x${PARTITION_ID}" == "xdel" -o ${#SERVICE_INSTANCE_LIST} == 0 ]; then
+        rm_job_list_del ${INSTANCE}
+        delete_service_instance ${INSTANCE}
+    fi
+done
+
+SERVICE_INSTANCE_LIST=$(${ZKCTL_BIN} job get-meta-keys --job-id=plan_add)
+#start new if it is up
+for INSTANCE in ${SERVICE_INSTANCE_LIST}; do
+    check_service_instance_is_valid ${INSTANCE}
+    [ $? -ne 0 ] && log_msg "${INSTANCE} is invalid" && continue
+    PARTITION=$(${ZKCTL_BIN} job get-meta-attr --job-id=plan_add --key="${INSTANCE}")
+    [ $? -ne 0 ] && log_err "${INSTANCE} get partition failed." && exit 1
+    STATE=$(${ZKCTL_BIN} service-instance get-current-state-attr --service-instance-id=${INSTANCE} --key=up_down_state 2>/dev/null) 
+    [ $? -ne 0 ] && log_err "${INSTANCE} get current-state-attr up_down_state failed." && STATE="down"
+    if [ "x${STATE}" == "xup" ]; then
+        is_new_layer ${PARTITION}
+        [ $? -eq 0 ] && log_msg "${INSTANCE} is new layer" && continue
+
+        #enable
+        start_service_instance ${INSTANCE}
+
+        #stop monitor
+        rm_job_list_add ${INSTANCE} ${PARTITION}
+
+        #mark deleteable
+        mark_deletable ${PARTITION}
+    else
+        #check is new layer
+        mark_if_new_layer ${PARTITION} ${INSTANCE}
+    fi
+done
+
+##### add new layer if all new layer is ok
+##### (if part is ok, bl may be wrong, which makes snapshot fail)
+# if some new layer are NOT ready, exit 
+is_all_new_layer_ok
+[ $? -ne 0 ] && exit 0
+
+log_msg "all new layer is ok, now starting new layers"
+
+SERVICE_INSTANCE_LIST=$(${ZKCTL_BIN} job get-meta-keys --job-id=plan_add)
+# if all new layer ok, commit them
+for INSTANCE in ${SERVICE_INSTANCE_LIST}; do
+    check_service_instance_is_valid ${INSTANCE}
+    [ $? -ne 0 ] && continue
+    PARTITION=$(${ZKCTL_BIN} job get-meta-attr --job-id=plan_add --key="${INSTANCE}")
+    is_new_layer ${PARTITION}
+    [ $? -ne 0 ] && continue
+
+    #enable
+    start_service_instance ${INSTANCE}
+
+    #stop monitor
+    rm_job_list_add ${INSTANCE} ${PARTITION}
+done
+
+exit 0

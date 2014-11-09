@@ -1,0 +1,34 @@
+add service-instance hjz-0000000001
+0
+missing option "--command-id"
+Usage: zkctl command add --service-instance-id='' --command-id='' --data='{}'
+add command with no command-id shoudl fail, result=1
+list command result=0
+add command result=0
+trandb
+list command result=0
+del command result=0
+list command result=0
+command "trandb" del failed, command trandb not found
+del deleted command should fail, result=1
+0
+{}
+0
+0
+{"age":88,"name":"hank"}
+0
+0
+{"age":88,"name":"joke"}
+0
+command "trandb" add-meta-attr failed, this key field may be exist already
+add exist attr should fail, result=1
+0
+{"age":88,"class":"12","name":"joke"}
+0
+command "trandb" del-meta-attr failed, this key field may not exist
+del not exit attr should fail, result=1
+{"age":88,"class":"12","name":"joke"}
+0
+0
+{"age":88,"name":"joke"}
+0

@@ -1,0 +1,45 @@
+#!/bin/bash
+source $(dirname $0)/common
+
+TYPE=service-instance
+NODE=hankjin.vicp.net
+
+node_clear $TYPE
+node_clear service
+./zkctl -s slavenode add --slavenode-id=$NODE  --data={}
+
+./zkctl -w $TYPE add --service-id=bs_dnews_0 --slavenode-id=$NODE --data={} 2>&1
+echo "Add with not exist service  failed: result=$?"
+./zkctl -w service add --service-id=bs_dnews_0  --data={}
+./zkctl -w service add --service-id=bs_dnews_2  --data={}
+./zkctl -w service add --service-id=bs_wp_2     --data={}
+echo "add service succedd result=$?"
+./zkctl -w service add --service-id=bc_group_1 --data={}
+#正常添加
+id=$(./zkctl -w $TYPE add --service-id=bs_dnews_0 --slavenode-id=$NODE --data={})
+echo "Add service instance $id succeed: result=$?"
+id=$(./zkctl -w $TYPE add --service-id=bs_dnews_2 --slavenode-id=$NODE --data={})
+echo "Add service instance $id succeed: result=$?"
+id=$(./zkctl -w $TYPE add --service-id=bs_wp_2 --slavenode-id=$NODE --data={})
+echo "Add service instance $id succeed: result=$?"
+bcid=$(./zkctl -w $TYPE add --service-id=bc_group_1 --slavenode-id=$NODE --data={})
+echo "Add service instance $bcid succeed: result=$?"
+./zkctl -s $TYPE list | sort
+
+#删除service
+./zkctl -w service del --service-id=bc_group_1 2>&1
+echo "delete service should failed. result=$?"
+#删除
+./zkctl -w $TYPE del --$TYPE-id=$bcid
+echo "delete bc instance $bcid result=$?"
+./zkctl -w $TYPE list | sort
+
+./zkctl -w service del --service-id=bc_group_1 2>&1
+echo "delete service should succeed. result=$?"
+#删除已经删除的
+./zkctl -w $TYPE del --$TYPE-id=$bcid 2>&1
+echo "Delete already deleted result=$?"
+
+node_clear $TYPE
+node_clear service
+node_clear slavenode

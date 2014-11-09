@@ -1,0 +1,404 @@
+#!/home/work/console/zkctl_impl/zksh
+#!./zkctl_impl/zksh 
+#Usage: ./zkctl [options] ...
+# [-s|--safe]:      no lock
+# [-r|--rlock]:     read lock
+# [-w|--wlock]:     write lock
+#
+# [-d|--debug]:     print debug message
+# [-v|--version]:   version information
+#Note: zksh will deal with these options, and does NOT leave them to zkctl
+PROGNAME=${0##*/} 
+
+print_usage_header()
+{
+cat <<EOF
+${PROGNAME} utility
+
+Usage: ${PROGNAME} $1 <ACTION> [options]
+       ${PROGNAME} $1 <ACTION> --help
+EOF
+echo
+}
+
+print_usage_footer()
+{
+cat <<EOF
+For more information, refer to:
+http://wiki.babel.baidu.com/twiki/bin/view/Ps/Main/DOPZookeeperAPIDesign 
+EOF
+echo
+}
+
+print_meta_actions()
+{
+cat <<EOF
+Global ACTIONs:
+    add-meta-attr
+    get-meta-attr
+    set-meta-attr
+    del-meta-attr
+    get-meta-all
+    set-meta-all
+EOF
+echo
+}
+
+print_semaphore_actions()
+{
+cat <<EOF
+Semaphore ACTIONs:
+    create-semaphore
+    destroy-semaphore
+    get-semaphore-resource-num
+    set-semaphore-resource-num
+    list-semaphore
+    list-semaphore-holder
+EOF
+echo
+}
+
+usage()
+{
+    print_usage_header "<OBJECT>"
+cat <<EOF 
+Valid OBJECTs: 
+    cluster
+    slavenode
+    service
+    service-instance
+    index-type
+    index-partition
+    index
+    idc
+    group
+    job
+    binary
+    dyndata-meta
+    dyndata
+    placement-plan
+    blacklist
+    connection
+    crontab
+    command
+EOF
+echo
+    print_usage_footer
+}
+
+usage_cluster()
+{
+    print_usage_header "cluster"
+cat <<EOF
+Valid ACTIONs:
+    create
+    repair
+    destroy
+EOF
+echo
+    print_meta_actions
+    print_semaphore_actions
+    print_usage_footer
+}
+
+usage_slavenode()
+{
+    print_usage_header "slavenode"
+cat <<EOF
+Valid ACTIONs:
+    add
+    del
+    list [--idc-id=] [--group-id=]
+    list-service-instance
+EOF
+echo
+    print_meta_actions
+    print_semaphore_actions
+    print_usage_footer
+}
+
+usage_service()
+{
+    print_usage_header "service"
+cat <<EOF
+Valid ACTIONs:
+    add
+    del
+    list
+    dump
+    list-service-instance
+    add-default-planned-state-attr
+    get-default-planned-state-attr
+    set-default-planned-state-attr
+    del-default-planned-state-attr
+    get-default-planned-state-all
+    set-default-planned-state-all
+EOF
+echo
+    print_meta_actions
+    print_semaphore_actions
+    print_usage_footer
+}
+
+
+usage_service-instance()
+{
+    print_usage_header "service-instance"
+cat <<EOF
+Valid ACTIONs:
+    add
+    del
+    list
+
+    add-planned-state-attr
+    get-planned-state-attr
+    set-planned-state-attr
+    del-planned-state-attr
+    get-planned-state-all
+    set-planned-state-all
+
+    add-current-state-attr
+    get-current-state-attr
+    set-current-state-attr
+    del-current-state-attr
+    get-current-state-all
+    set-current-state-all
+    check
+    watch
+EOF
+echo
+    print_meta_actions
+    print_usage_footer
+}
+
+usage_index-type()
+{
+    print_usage_header "index-type"
+cat <<EOF
+Valid ACTIONs:
+    add
+    del
+    list
+    list-index-partition
+EOF
+echo
+    print_meta_actions
+    print_usage_footer
+}
+
+usage_index-partition()
+{
+    print_usage_header "index-partition"
+cat <<EOF
+Valid ACTIONs:
+    add
+    del
+    list
+    list-index
+EOF
+echo
+    print_meta_actions
+    print_usage_footer
+}
+
+usage_index()
+{
+    print_usage_header "index"
+cat <<EOF
+Valid ACTIONs:
+    add
+    del
+    list
+EOF
+echo
+    print_meta_actions
+    print_usage_footer
+}
+
+usage_idc()
+{
+    print_usage_header "idc"
+cat <<EOF
+Valid ACTIONs:
+    add
+    del
+    list
+EOF
+echo
+    print_meta_actions
+    print_semaphore_actions
+    print_usage_footer
+}
+
+usage_group()
+{
+    print_usage_header "group"
+cat <<EOF
+Valid ACTIONs:
+    add
+    del
+    list
+EOF
+echo
+    print_meta_actions
+    print_semaphore_actions
+    print_usage_footer
+}
+
+usage_job()
+{
+    print_usage_header "job"
+cat <<EOF
+Valid ACTIONs:
+    add
+    del
+    list
+EOF
+echo
+    print_meta_actions
+    print_semaphore_actions
+    print_usage_footer
+}
+
+usage_binary()
+{
+    print_usage_header "binary"
+cat <<EOF
+Valid ACTIONs:
+    register
+    push
+EOF
+echo
+}
+
+usage_dyndata-meta()
+{
+    print_usage_header "dyndata-meta"
+cat <<EOF
+Valid ACTIONs:
+    add
+    del
+    list
+EOF
+echo
+    print_meta_actions
+    print_semaphore_actions
+    print_usage_footer
+}
+
+usage_dyndata()
+{
+    print_usage_header "dyndata"
+cat <<EOF
+Valid ACTIONs:
+    register
+    push
+EOF
+echo
+    print_usage_footer
+}
+
+usage_placement-plan()
+{
+    print_usage_header "placement-plan"
+cat <<EOF
+Valid ACTIONs:
+    dump
+    generate
+    apply
+    commit
+    check
+EOF
+echo
+    print_usage_footer
+}
+
+usage_blacklist()
+{
+    print_usage_header "blacklist"
+cat <<EOF
+Valid ACTIONs:
+    check
+    clean
+EOF
+echo
+    print_usage_footer
+}
+
+usage_connection()
+{
+    print_usage_header "connection"
+cat <<EOF
+Valid ACTIONS:
+    refresh
+EOF
+echo
+    print_usage_footer
+}
+
+usage_crontab()
+{
+    print_usage_header "crontab"
+cat <<EOF
+Valid ACTIONS:
+    autocommit
+EOF
+echo
+    print_usage_footer
+}
+
+usage_command()
+{
+    print_usage_header "command"
+cat <<EOF
+Valid ACTIONS:
+    generateid
+    add
+    list
+    del
+EOF
+echo
+    print_meta_actions
+    print_usage_footer
+}
+
+# show global usage message
+if [ "x$1" == "x" ] || [ "x$1" == "x-h" ] || [ "x$1" == "x--help" ]; then
+    usage && exit 1
+else
+    OBJECT=$1
+fi
+
+# show object-vise usage message
+if [ "x$2" == "x" ] || [ "x$2" == "x-h" ] || [ "x$2" == "x--help" ]; then
+    type "usage_${OBJECT}" >/dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        usage_${OBJECT}
+        exit 1
+    else
+        echo "zkctl: unrecognized object \"${OBJECT}\"" 1>&2
+        echo
+        usage
+        exit 1
+    fi
+else
+    ACTION=$2
+fi
+
+ZKCTL_IMPL_PATH="$(dirname $0)/zkctl_impl"
+ZKCTL_BIN="zkctl.bin"
+export ZKCTL_CONF="zkctl.conf"
+
+# routing actions to either scripts named by ${OBJECT}_${ACTION} or zkctl.bin
+TARGET_SCRIPT="${OBJECT}_${ACTION}"
+if [ -f "${ZKCTL_IMPL_PATH}/${TARGET_SCRIPT}" ]; then
+    cd ${ZKCTL_IMPL_PATH}
+    shift 2
+    ./${TARGET_SCRIPT} "$@"
+    exit $?
+else
+    cd ${ZKCTL_IMPL_PATH}
+    ./${ZKCTL_BIN} "$@"
+    exit $?
+fi
+

@@ -1,0 +1,20 @@
+service-instance add failed, can't find service "bs_dnews_0"
+Add with not exist service  failed: result=1
+add service succedd result=0
+Add service instance bs_dnews_0-0000000001 succeed: result=0
+Add service instance bs_dnews_2-0000000001 succeed: result=0
+Add service instance bs_wp_2-0000000001 succeed: result=0
+Add service instance bc_group_1-0000000001 succeed: result=0
+bc_group_1-0000000001
+bs_dnews_0-0000000001
+bs_dnews_2-0000000001
+bs_wp_2-0000000001
+service del failed, probally has child
+delete service should failed. result=1
+delete bc instance bc_group_1-0000000001 result=0
+bs_dnews_0-0000000001
+bs_dnews_2-0000000001
+bs_wp_2-0000000001
+delete service should succeed. result=0
+service-instance bc_group_1-0000000001 del failed, can not find this
+Delete already deleted result=1

@@ -1,0 +1,3 @@
+version.o: version.cpp version.h
+zksh.o: zksh.cpp zksh.h zk_util.h version.h
+util.o: util.cpp

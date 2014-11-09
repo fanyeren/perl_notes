@@ -1,0 +1,56 @@
+#!/bin/bash
+#
+#
+#
+source $(dirname $0)/common
+
+#
+function prepare_env()
+{
+    ./zkctl -s group add --group-id=group_x --data={}
+    ./zkctl -s idc add --idc-id=jx --data={}
+    ./zkctl -s idc add --idc-id=tc --data={}
+    ./zkctl -s slavenode add --slavenode-id=n1 --data='{"group":"group_x","idc":"jx","cpu_capacity":"100","failure_domain":"f1","online_state":"online"}'
+    ./zkctl -s slavenode add --slavenode-id=n2 --data='{"group":"group_x","idc":"jx","cpu_capacity":"100","failure_domain":"f1","online_state":"online"}'
+    ./zkctl -s slavenode add --slavenode-id=n3 --data='{"group":"group_x","idc":"jx","cpu_capacity":"100","failure_domain":"f1","online_state":"online"}'
+    ./zkctl -s slavenode add --slavenode-id=n4 --data='{"group":"group_x","idc":"jx","cpu_capacity":"100","failure_domain":"f1","online_state":"online"}'
+    ./zkctl -s slavenode add --slavenode-id=n5 --data='{"group":"group_x","idc":"tc","cpu_capacity":"100","failure_domain":"f1","online_state":"online"}'
+    ./zkctl -s slavenode add --slavenode-id=n6 --data='{"group":"group_x","idc":"tc","cpu_capacity":"100","failure_domain":"f1","online_state":"online"}'
+    ./zkctl -s slavenode add --slavenode-id=n7 --data='{"group":"group_x","idc":"tc","cpu_capacity":"100","failure_domain":"f1","online_state":"online"}'
+    ./zkctl -s slavenode add --slavenode-id=n8 --data='{"group":"group_x","idc":"tc","cpu_capacity":"100","failure_domain":"f1","online_state":"online"}'
+
+    ./zkctl -s index-type add --index-type=wdnb --data='{"category":"auto","trans_db_priority":"2","trans_db_timeout":"1800"}'
+    ./zkctl -s index-partition add --index-partition-id=wdnb_0 --data='{"group":"group_x", "replication_factor":"1", "index_type":"wdnb", "index_layer":"1"}'
+    ./zkctl -s index-partition add --index-partition-id=wdnb_1 --data='{"group":"group_x", "replication_factor":"1", "index_type":"wdnb", "index_layer":"2"}'
+    ./zkctl -s index-partition add --index-partition-id=wdnb_2 --data='{"group":"group_x", "replication_factor":"1", "index_type":"wdnb", "index_layer":"3"}'
+    ./zkctl -s service add --service-id=bs_wdnb_0 --data={}
+    ./zkctl -s service add --service-id=bs_wdnb_1 --data={}
+    ./zkctl -s service add --service-id=bs_wdnb_2 --data={}
+}
+function change_plan()
+{
+    ./zkctl -s group list | while read groupid; do
+        ./zkctl -s idc list | while read idcid; do
+            ./zkctl -s placement-plan dump --idc-id=$idcid --group-id=$groupid | ./zkctl -s placement-plan generate | ./zkctl -s placement-plan apply
+        done
+    done
+    ./zkctl -s service-instance list | while read sid; do
+        ./zkctl -s service-instance set-current-state-all --service-instance-id=$sid --data='{"up_down_state":"up","port":"12345"}'
+    done
+    ./zkctl -s job get-meta-keys --job-id=plan_add
+    ./zkctl -s placement-plan commit 2>&1
+}
+
+function clear_env()
+{
+    node_clear service-instance
+    node_clear service
+    node_clear index-partition
+    node_clear index-type
+    node_clear slavenode
+    node_clear idc
+    node_clear group
+}
+clear_env
+prepare_env
+change_plan

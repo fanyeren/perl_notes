@@ -1,0 +1,22 @@
+#!/bin/bash
+source "public.inc"
+
+TIMESTAMP=$(date +%Y%m%d%H%M%s)
+
+function main()
+{
+    local TODO_GROUPS
+    TODO_GROUPS=$(./zkctl -s placement-plan commit|sort|uniq)
+
+    for group in ${TODO_GROUPS[@]}; do
+        ./zkctl -s placement-plan dump --group-id=$group > dump.$TIMESTAMP.$group.$$
+        [ $? -ne 0 ] && log_err "dump group \"${group}\" failed" && continue
+        ./zkctl -s connection generate < dump.$TIMESTAMP.$group.$$ > conn.$TIMESTAMP.$group.$$
+        [ $? -ne 0 ] && log_err "generate dump.$TIMESTAMP.$group.$$ failed" && continue
+        ./zkctl -s connection commit conn.$TIMESTAMP.$group.$$
+        [ $? -ne 0 ] && log_err "connection commit conn.$TIMESTAMP.$group.$$ failed" && continue
+    done
+}
+cd ..
+main
+cd -

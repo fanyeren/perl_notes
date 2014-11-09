@@ -1,0 +1,32 @@
+clear semaphore...
+semaphore cleared
+bash_wlock
+bash_rlock
+adding sema
+creaet semaphore deploy_service result=0
+creaet semaphore deploy_dyndata result=0
+semaphore added
+bash_wlock
+bash_rlock
+deploy_service
+deploy_dyndata
+semaphore checking...
+100
+get semaphore deploy_service=100  result=0
+semaphore changed:
+0
+100
+get semaphore deploy_dyndata=100  result=0
+semaphore changed:
+0
+semaphore checked
+bash_wlock
+bash_rlock
+deploy_service
+deploy_dyndata
+clear semaphore...
+destroy semaphore deploy_service=100 result=0
+destroy semaphore deploy_dyndata=100 result=0
+semaphore cleared
+bash_wlock
+bash_rlock

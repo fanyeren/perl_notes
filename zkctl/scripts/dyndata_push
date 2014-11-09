@@ -1,0 +1,87 @@
+#! /bin/bash
+
+PROGNAME=${0##*/} 
+
+function usage() 
+{ 
+cat <<EOF 
+push dynamic data to online
+
+Usage: ${PROGNAME} -s|--service-id -n|--data-name -t|--timestamp -f|--hdfs-path -l|--local-path -w|--pre-work -r|--reload-cmd
+       ${PROGNAME} -i|--service-instance-id -n|--data-name -t|--timestamp -f|--hdfs-path -l|--local-path -w|--pre-work -r|--reload-cmd
+       ${PROGNAME} -p|--index-partition-id -n|--data-name -t|--timestamp -f|--hdfs-path -l|--local-path -w|--pre-work -r|--reload-cmd
+       ${PROGNAME} -n|--data-name -t|--timestamp -f|--hdfs-path -w|--pre-work -r|--reload-cmd
+       ${PROGNAME} -h|--help
+
+Options: 
+EOF
+cat <<EOF | column -s\& -t 
+	-s|--service-id & service id
+	-i|--service-instance-id & service instance id
+	-p|--index-partition-id & index partition id(if binded to an index-partition)
+	-n|--data-name & data name
+	-t|--timestamp & data timestamp
+	-f|--hdfs-path & hdfs path
+	-l|--local-path & local path
+	-w|--pre-work & pre checking command line
+	-r|--reload-cmd & reload command line
+	-h|--help & show this help 
+EOF
+echo
+} 
+
+SHORTOPTS="s:i:p:n:t:f:l:w:r:h"
+LONGOPTS="service-id:,service-instance-id:,index-partition-id:,data-name:,timestamp:,hdfs-path:,pre-work:,local-path:,reload-cmd:,help"
+TEMP=`getopt --options ${SHORTOPTS} --longoptions ${LONGOPTS} --name ${PROGNAME} -- "$@"`
+[ $? -ne 0 ] &&	usage && exit 1
+
+eval set -- "$TEMP"
+
+while true ; do
+	case "$1" in
+		-s|--service-id) SERVICE_ID="$2"; shift 2;;
+		-i|--service-instance-id) SERVICE_INSTANCE_ID="$2"; shift 2;;
+		-p|--index-partition-id) INDEX_PARTITION_ID="$2"; shift 2;;
+		-n|--data-name) DATA_NAME="$2"; shift 2;;
+		-t|--timestamp) TIMESTAMP="$2"; shift 2;;
+		-f|--hdfs-path) HDFS_PATH="$2"; shift 2;;
+		-l|--local-path) LOCAL_PATH="$2"; shift 2;;
+		-w|--pre-work) PRE_WORK="$2"; shift 2;;
+		-r|--reload-cmd) RELOAD_CMD="$2"; shift 2;;
+		-h|--help) usage; exit 0;;
+		--) shift ; break ;;
+		*) usage; exit 1 ;;
+	esac
+done
+
+
+source "public.inc"
+DYNDATA_META=$(cat <<EOF
+{   
+    "location": "${HDFS_PATH}",
+    "prework": "${PRE_WORK}",
+    "relativepath": "${LOCAL_PATH}",
+    "timestamp": "${TIMESTAMP}",
+    "reloadcmd": "${RELOAD_CMD}"
+}
+EOF)
+
+if [ "x${SERVICE_ID}" != "x" ]; then
+	SERVICE_INSTANCE_LIST=$(${ZKCTL_BIN} service list-service-instance --service-id="${SERVICE_ID}")
+elif [ "x${SERVICE_INSTANCE_ID}" != "x" ]; then
+	SERVICE_INSTANCE_LIST=${SERVICE_INSTANCE_ID}
+elif [ "x${INDEX_PARTITION_ID}" != "x" ]; then
+	SERVICE_INSTANCE_LIST=$(${ZKCTL_BIN} service list-service-instance --service-id="bs_${INDEX_PARTITION_ID}")
+else
+	SERVICE_INSTANCE_LIST=`cat`
+fi
+
+HAS_FAILURE=0
+for ID in ${SERVICE_INSTANCE_LIST}; do
+	${ZKCTL_BIN} service-instance set-planned-state-attr --service-instance-id="${ID}" --key="dyndata.${DATA_NAME}" --value="${DYNDATA_META}"
+	[ $? -ne 0 ] && echo "${ID} set planned state attribute dyndata.${DATA_NAME} failed." && HAS_FAILURE=1 && continue
+	echo ${ID}
+done
+
+exit 0
+

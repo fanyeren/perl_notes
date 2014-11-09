@@ -1,0 +1,911 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+""" Utility that makes placements for index partitions into a cluster. 
+"""
+
+__author__ = 'dinghaifeng@baidu.com (Ding Haifeng)'
+
+import sys
+import logging
+import random
+import json
+import getopt
+import socket
+
+#logging.basicConfig(format="%(asctime)s %(levelname)8s [%(funcName)s]: %(message)s")
+logging.basicConfig()
+LOG = logging.getLogger('placement_plan_generate')
+#LOG.setLevel(logging.DEBUG)
+
+def oops(fmt, *args):
+    '''encounter unexpected error, print msg and exit '''
+    fmt+='\n'
+    sys.stderr.write(fmt % args)
+    sys.exit(1)
+class IndexPartition:
+    """ IndexPartition class.
+
+        Attributes:
+            id: partition id. (vip_1, se_2, etc.)
+            type: index type. (vip, se, dnews, etc.)
+            size: occupied space of this partition. a float number in MB.
+            replication_factor: how many replicas of this partition is expected.
+            nodes: nodes at which replicas of this partition are placed.
+            context: IndexPlacementMananger instance.
+    """
+
+    def __init__(self, id, type, layer, size, replication_factor, group, context):
+        self.id = id
+        self.type = type
+        self.layer = layer
+        self.size = size
+        self.replication_factor = replication_factor
+        self.group = group
+        self.context = context
+        self.nodes = {}
+
+    def slavenode(self, node_id):
+        """ Returns the node instance if this partition is hosted on node_id, 
+            or returns None if not.
+        """
+        if node_id in self.nodes:
+            return self.context.get_slavenode(node_id)
+        else:
+            return None
+
+    def replica_count(self):
+        """ Returns actual replica count.  """
+        return len(self.nodes)
+
+    def replica_count_of_new_and_running(self):
+        """ TO_BE_DELETED replicas are omitted in replica count. 
+        >>> hjz=IndexPartition(None,None,None,None,None,None,None)
+        >>> hjz.nodes={"a1":"NEW", "a2":"NEW", "a3":"NEW", \
+                "b1":"RUNNING", "b2":"RUNNING", \
+                "c":"TO_BE_DELETED"}
+        >>> hjz.replica_count_of_new_and_running()
+        5
+        """
+        count = 0
+        for node_id, state in self.nodes.iteritems():
+            if state == 'NEW' or state == 'RUNNING':
+                count += 1
+        return count
+
+    def place_at_node(self, node_id, service_state):
+        """ Place a partition at node with node_id. 
+            A partition cannot be placed more than one time at a same node.
+        """
+        if node_id in self.nodes:
+            LOG.warning('partition [%s] already placed at node [%s]', self.id, node_id)
+            return False
+        self.nodes[node_id] = service_state 
+        LOG.info('partition [%s] placed at node [%s]', self.id, node_id)
+        return True
+
+    def displace_from_node(self, node_id):
+        """ Displace a partition from node with node_id.  """
+        if node_id not in self.nodes:
+            LOG.warning('partition [%s] not exist at node [%s]', self.id, node_id)
+            return False
+        del self.nodes[node_id]
+        LOG.info('partition [%s] remove from node [%s]', self.id, node_id)
+        return True
+
+    def to_string(self):
+        return ', '.join(self.nodes)
+
+
+class IndexPartitionSuite:
+    def __init__(self):
+        self.id = None
+        self.partitions = []
+
+
+class SlaveNode:
+    """ SlaveNode class. 
+
+        Attributes:
+            id: Search node id. (use hostname commonly)
+            ip: Search node ip.
+            capacity: Disk space of search node.
+                      only refer to SSD/Flash for simplicity.
+            failure_domain: failure domain this node belongs to.
+            partitions: partitions which placed at this node.
+            context: IndexPlacementMananger instance.
+    """
+
+    def __init__(self, id, ip, capacity, failure_domain, online, idc, group, context):
+        self.id = id
+        self.ip = ip
+        self.capacity = capacity
+        self.failure_domain = failure_domain
+        self.partitions = {}
+        self.online = online
+        self.idc = idc
+        self.group = group
+        self.context = context
+
+    def place_index_partition(self, partition_id, meta):
+        if partition_id in self.partitions:
+            LOG.warning('partition [%s] already placed at node [%s]', partition_id, self.id)
+            return False
+        self.partitions[partition_id] = {"state": meta["state"], "service_port": meta["service_port"]}
+        LOG.info('partition [%s] placed at node [%s]', partition_id, self.id)
+        return True
+
+    def displace_index_partition(self, partition_id):
+        if partition_id not in self.partitions:
+            LOG.warning('partition [%s] not found at node [%s]', partition_id, self.id)
+            return False
+        del self.partitions[partition_id]
+        LOG.info('partition [%s] removed from node [%s]', partition_id, self.id)
+        return True
+
+    def get_service_state(self, partition_id):
+        if partition_id not in self.partitions:
+            LOG.warning('partition [%s] not found at node [%s]', partition_id, self.id)
+            return False
+        return self.partitions[partition_id]["state"]
+
+    def index_partitions_of_new_and_running(self):
+        return [self.context.get_index_partition(id) 
+                    for id in self.partitions 
+                    if self.partitions[id]['state']=='NEW' or self.partitions[id]['state']=='RUNNING']
+
+    def index_partitions(self):
+        return [self.context.get_index_partition(id) 
+                    for id in self.partitions]
+
+    def index_partitions_by_id_of_new_and_running(self, partition_id):
+        return [self.context.get_index_partition(id) 
+                    for id in self.partitions 
+                    if id == partition_id and (self.partitions[id]['state']=='NEW' or self.partitions[id]['state']=='RUNNING')]
+
+    def index_partitions_by_id(self, partition_id):
+        return [self.context.get_index_partition(id) 
+                    for id in self.partitions 
+                    if id == partition_id]
+
+    def index_partitions_by_type(self, type):
+        return [self.context.get_index_partition(id) 
+                    for id in self.partitions 
+                    if self.context.get_index_partition(id).type == type]
+
+    def get_failure_domain(self):
+        for domain in self.context.failure_domains.values():
+            if domain.slavenode(self.id):
+                return domain
+        return None
+
+    def to_string(self):
+        return ', '.join(self.partitions)
+
+
+class SlaveNodeGroup:
+    def __init__(self, id, context):
+        self.id = id
+        self.context = context
+        self.nodes = {}
+
+
+class FailureDomain:
+    A_VERY_LARGE_NUMBER = 10.0 ** 8
+    def __init__(self, id, context):
+        self.id = id
+        self.nodes = {}
+        self.context = context
+
+    def add_slavenode(self, node_id):
+        if node_id in self.nodes:
+            LOG.warning('failure domain [%s] already has node [%s]', self.id, node_id)
+            return False
+
+        self.nodes[node_id] = None
+        LOG.info('failure domain [%s] has new node [%s]', self.id, node_id)
+        return True
+
+    def rm_slavenode(self, node_id):
+        '''remove slave node
+        >>> hjz=FailureDomain('jx',None)
+        >>> node=SlaveNode(1, None, None, None, None, None, None, None)
+        >>> hjz.add_slavenode(node.id)
+        True
+        >>> hjz.slavenode_count()
+        1
+        >>> hjz.rm_slavenode(node.id)
+        True
+        >>> hjz.slavenode_count()
+        0
+        >>> hjz.rm_slavenode(node.id) #a warning msg will be printed
+        False
+        '''
+        if not node_id in self.nodes:
+            LOG.warning('node [%s] not in failure domain [%s]', node_id, self.id)
+            return False
+        del self.nodes[node_id]
+        LOG.info('node [%s] removed from failure domain [%s]', node_id, self.id)
+        return True
+        
+    def slavenode(self, node_id):
+        if node_id in self.nodes:
+            return self.context.get_slavenode(node_id)
+        else:
+            return None
+
+    def slavenode_count(self):
+        return len(self.nodes)
+
+    def index_partition_count(self):
+        node_list = [self.context.get_slavenode(id) for id in self.nodes]
+        count = 0
+        for node in node_list:
+            count += len(node.index_partitions())
+        return count
+
+    def index_partition_count_by_id(self, partition_id):
+        node_list = [self.context.get_slavenode(id) for id in self.nodes]
+        count = 0
+        for node in node_list:
+            count += len(node.index_partitions_by_id(partition_id))
+        return count
+
+    def index_partition_count_by_type(self, partition_type):
+        node_list = [self.context.get_slavenode(id) for id in self.nodes]
+        count = 0
+        for node in node_list:
+            count += len(node.index_partitions_by_type(partition_type))
+        return count
+
+class IndexPlacementAction:
+    def __init__(self, action, partition, src_node, dest_node):
+        self.action = action
+        self.partition = partition
+        self.src_node = src_node
+        self.dest_node = dest_node
+
+    def execute(self):
+        ret1, ret2, ret3, ret4 = [False, False, True, True]
+        if self.action == 'ADD':
+            ret1 = self.dest_node.place_index_partition(self.partition.id, {"state":'NEW',"service_port":""})
+            ret2 = self.partition.place_at_node(self.dest_node.id, service_state='NEW')
+        elif self.action == 'DEL':
+            ret1 = self.src_node.displace_index_partition(self.partition.id)
+            ret2 = self.partition.displace_from_node(self.src_node.id)
+        elif self.action == 'MOVE':
+            source_state = self.src_node.get_service_state(self.partition.id)
+            ret1 = self.src_node.displace_index_partition(self.partition.id)
+            ret2 = self.partition.displace_from_node(self.src_node.id)
+            ret3 = self.dest_node.place_index_partition(self.partition.id, {"state":source_state,"service_port":""})
+            ret4 = self.partition.place_at_node(self.dest_node.id, service_state=source_state)
+            LOG.info("executin %s: %s, %s, %s, %s", self.to_string(), ret1, ret2, ret3, ret4)
+        else:
+            pass
+        if self.action != 'MOVE':
+            LOG.info("executin %s: %s, %s", self.to_string(), ret1, ret2)
+        return ret1 and ret2 and ret3 and ret4
+
+    def to_string(self):
+        str = "%s %s" % (self.action, self.partition.id)
+        if (self.action == 'ADD'):
+            str += ' %s' % (self.dest_node.id)
+        if (self.action == 'DEL'):
+            str += ' %s' % (self.src_node.id)
+        if (self.action == 'MOVE'):
+            str += ' %s %s' % (self.src_node.id, self.dest_node.id)
+        return str
+    
+    def to_json(self):
+        json_str = '{"action":"%s", "index_partition_id":"%s""' % (self.action, self.partition.id)
+        if (self.action == 'ADD'):
+            json_str += ', "dest_slavenode_id":"%s"' % (self.dest_node.id)
+        if (self.action == 'DEL'):
+            json_str += ', "src_slavenode_id":"%s"' % (self.src_node.id)
+        if (self.action == 'MOVE'):
+            json_str += ', "src_slavenode_id":"%s", "dest_slavenode_id":"%s"' % (self.src_node.id, self.dest_node.id)
+        json_str += '}'
+        return json_str
+
+class DefaultReplicatePolicy:
+    def __init__(self, context):
+        self.context = context
+
+    def __node_sorting_tuple_del(self, node, partition_id, partition_type):
+        node_usage=len(node.index_partitions())
+        return (len(node.index_partitions_by_id_of_new_and_running(partition_id))>0 and node.online=='offline', #rm offline machine first
+                len(node.index_partitions_by_id_of_new_and_running(partition_id)),     #num of same index-partition
+                len(node.index_partitions_by_type(partition_type)), #num of same index-type
+                len(node.index_partitions()),                       #num of total
+                hash((node_usage, node.id))%20011,                  #different replica with different order, to get rid of (a1b1, a2b2)
+                node.id,                                            #id, make result stable.
+                node)                                               #object to return.
+    def __node_sorting_tuple_add(self, node, partition_id, partition_type):
+        node_usage=len(node.index_partitions())
+        return (node.online=='offline',                             #not add offline machine if online exists
+                len(node.index_partitions_by_id(partition_id)),     #num of same index-partition
+                len(node.index_partitions_by_type(partition_type)), #num of same index-type
+                len(node.index_partitions()),                       #num of total
+                hash((node_usage, node.id))%20011,                  #different replica with different order, to get rid of (a1b1, a2b2)
+                node.id,                                            #id, make result stable.
+                node)                                               #object to return.
+
+    # define domain_tuple to keep total order
+    def __domain_sorting_tuple(self, domain, partition_id, partition_type):
+        node_partition_count_list = []
+        for node_id in domain.nodes.keys():
+            node = self.context.get_slavenode(node_id)
+            if node.index_partitions_by_id(partition_id):
+                partition_count = len(node.index_partitions())
+                node_partition_count_list.append(partition_count)
+            else:
+                node_partition_count_list.append(0)
+
+        return (float(domain.index_partition_count_by_id(partition_id)) / (domain.slavenode_count()), 
+                float(domain.index_partition_count_by_type(partition_type)) / (domain.slavenode_count()), 
+                float(domain.index_partition_count()) / (domain.slavenode_count()), 
+                max(node_partition_count_list),
+                -len(domain.nodes),
+                domain.id,
+                domain)
+
+    def __select_slavenodes(self, failure_domain, partition_id, partition_type, action):
+        if action == 'ADD':
+            heap = [self.__node_sorting_tuple_add(self.context.get_slavenode(id), partition_id, partition_type) 
+                    for id in failure_domain.nodes]
+        elif action == 'DEL':
+            heap = [self.__node_sorting_tuple_del(self.context.get_slavenode(id), partition_id, partition_type) 
+                    for id in failure_domain.nodes]
+        else:
+            return None
+
+        heap.sort()
+
+        if action == 'ADD':
+            return heap[0][-1]
+        elif action == 'DEL':
+            return heap[-1][-1]
+
+    def __select_failure_domain(self, domains, partition_id, partition_type, action):
+        heap = [self.__domain_sorting_tuple(domain, partition_id, partition_type) 
+                    for domain in domains]
+        heap.sort()
+
+        if action == 'ADD':
+            return heap[0][-1]
+        elif action == 'DEL':
+            return heap[-1][-1]
+        else:
+            return None
+
+    def process_under_replicated_partition(self, partition):
+        '''increase replica to fullfill replication_factor
+        !!!print error and exit, if no enough slot to place instance
+        '''
+        scheduled_action_list = []
+
+        while partition.replication_factor - partition.replica_count_of_new_and_running() > 0:
+            domains = self.context.failure_domains.values()
+            domain = self.__select_failure_domain(domains, partition.id, partition.type, 'ADD')
+            if domain.index_partition_count_by_id(partition.id) != 0:
+                LOG.warning('more than one replicas of partition %s placed at failure domain %s', partition.id, domain.id)
+
+            node = self.__select_slavenodes(domain, partition.id, partition.type, 'ADD')
+            if None == node:
+                oops('no available slavenod to place partition %s at domain %s', partition.id, domain.id)
+            action = IndexPlacementAction('ADD', partition, None, node)
+            LOG.info('partition %s placed at %s %s' % (partition.id, domain.id, node.id))
+            scheduled_action_list.append(action)
+            if False == action.execute():
+                oops('action %s execute failed', action.to_string())
+
+        return scheduled_action_list
+
+    def process_over_replicated_partition(self, partition):
+        scheduled_action_list = []
+
+        while partition.replica_count_of_new_and_running() - partition.replication_factor > 0:
+            domains = self.context.failure_domains.values()
+            domain = self.__select_failure_domain(domains, partition.id, partition.type, 'DEL')
+            node = self.__select_slavenodes(domain, partition.id, partition.type, 'DEL')
+            action = IndexPlacementAction('DEL', partition, node, None)
+            scheduled_action_list.append(action)
+            action.execute()
+
+        return scheduled_action_list
+
+    def __get_average_partition_count(self):
+        node_count = float(len(self.context.slavenodes))
+        if node_count == 0:
+            return 
+        partition_count = 0
+        for partition in self.context.index_partitions.values():
+            partition_count += len(partition.nodes)
+        average_partition_count = partition_count / node_count
+
+        return average_partition_count
+
+    def __get_average_partition_count_by_type(self):
+        node_count = float(len(self.context.slavenodes))
+        if node_count == 0:
+            return 
+        partition_count_by_type = {}
+        for partition in self.context.index_partitions.values():
+            if partition.type not in partition_count_by_type:
+                partition_count_by_type[partition.type] = 0
+            partition_count_by_type[partition.type] += 1
+
+        average_partition_count_by_type = {}
+        for partition_type in partition_count_by_type.keys():
+            average_partition_count_by_type[partition_type] = partition_count_by_type[partition_type] / node_count
+
+        return average_partition_count_by_type
+
+    #TODO: rm this
+    def __sort_slavenode_by_partition_count(self):
+        node_list = self.context.slavenodes.values()
+        node_list.sort(lambda x, y: cmp(len(x.index_partitions()), len(y.index_partitions())))
+        return node_list
+
+    def __get_max_load_slavenode_cmp(self, node1, node2):
+        if node1.online=='offline' and len(node1.index_partitions_of_new_and_running())>0: 
+            return 1
+        elif node2.online=='offline' and len(node2.index_partitions_of_new_and_running())>0: 
+            return -1
+        else:
+            return cmp(len(node1.index_partitions()), len(node2.index_partitions()))
+    def __get_max_load_slavenode(self):
+        node_list = self.context.slavenodes.values()
+        node_list.sort(self.__get_max_load_slavenode_cmp)
+        result=node_list[-1]
+        result.weight=len(result.partitions)
+        if result.online=='offline': result.weight = sys.maxint
+        return result
+
+    def __get_min_load_slavenode_cmp(self, node1, node2):
+        if node1.online=='offline': 
+            return 1
+        elif node2.online=='offline': 
+            return -1
+        else:
+            return cmp(len(node1.index_partitions()), len(node2.index_partitions()))
+    def __get_min_load_slavenode(self):
+        node_list = self.context.slavenodes.values()
+        node_list.sort(self.__get_min_load_slavenode_cmp)
+        result=node_list[0]
+        result.weight=len(result.partitions)
+        return result
+
+    def __partition_count_delta_to_average(self, node):
+        average_partition_count_by_type = self.__get_average_partition_count_by_type()
+
+        partition_count_by_type = {}
+        for partition in node.index_partitions():
+            if partition.type not in partition_count_by_type:
+                partition_count_by_type[partition.type] = 0
+            partition_count_by_type[partition.type] += 1
+
+        partition_count_delta = {}
+        for partition_type in partition_count_by_type.keys():
+            partition_count_delta[partition_type] = partition_count_by_type[partition_type] \
+                                            - average_partition_count_by_type[partition_type]
+
+        return partition_count_delta
+
+    def __partition_type_with_largest_delta(self, partition_count_delta):
+        sorted_partition = sorted(partition_count_delta.iteritems(), key = lambda x: x[1])
+        return sorted_partition[-1][0]
+   
+    #define a sorting tuple of index_partitions to select to move
+    def __partition_sorting_tuple(self, partition, node, partition_count_delta):
+        if partition.id in node.partitions:
+            partition_contained = 1
+        else:
+            partition_contained = 0
+        if partition.id in node.index_partitions_by_type(partition.type):
+            type_contained = 1
+        else:
+            type_contained = 0
+        domain = node.get_failure_domain()
+        domain_tuple = self.__domain_sorting_tuple(domain, partition.id, partition.type)
+        domain_contained = node.failure_domain
+
+        return (partition_contained, type_contained, domain_tuple, partition_count_delta[partition.type], partition)
+    
+    def __select_partition_to_move(self, heavy_node, light_node):
+        partition_count_delta = self.__partition_count_delta_to_average(heavy_node)
+        heap = [self.__partition_sorting_tuple(partition, light_node, partition_count_delta) 
+                for partition in heavy_node.index_partitions()]
+        heap.sort()
+
+        return heap[0][-1]
+            
+
+    def process_between_nodes(self, heavy_node, light_node):
+        scheduled_action_list = []
+
+        target_partition = self.__select_partition_to_move(heavy_node, light_node)
+        action = IndexPlacementAction('MOVE', target_partition, heavy_node, light_node)
+        action.execute()
+        scheduled_action_list.append(action)
+
+        return scheduled_action_list
+
+    def process_heavily_loaded_node(self, node):
+        scheduled_action_list = []
+
+        partition_count_delta = self.__partition_count_delta_to_average(node)
+        partition_type_with_largest_delta = self.__partition_type_with_largest_delta(partition_count_delta)
+        partition_list = node.index_partitions_by_type(partition_type_with_largest_delta)
+        target_partition = random.sample(partition_list, 1)[0]
+        del_action = IndexPlacementAction('DEL', target_partition, node, None)
+        del_action.execute()
+
+        action_list = self.process_under_replicated_partition(target_partition)
+        add_action = action_list[0]
+        if (add_action.action != 'ADD'):
+            LOG.warning(("expect an 'ADD' action when constructing MOVE [%s] after DEL from [%s]", target_partition.id, node.id))
+            return None
+
+        action = IndexPlacementAction('MOVE', target_partition, node, add_action.src_node)
+        scheduled_action_list.append(action)
+        if (len(action_list) > 1):
+            scheduled_action_list += action_list[1:]
+        
+        return scheduled_action_list
+            
+    def process_lightly_loaded_node(self, node):
+        scheduled_action_list = []
+
+        partition_count_delta = self.__partition_count_delta_to_average(node)
+        partition_type_with_largest_delta = self.__partition_type_with_largest_delta(partition_count_delta)
+        partition_list = self.context.index_partition_
+
+
+    def process_unevenly_loaded_node(self):
+        scheduled_action_list = []
+
+        while True:
+            max_load_node = self.__get_max_load_slavenode()
+            min_load_node = self.__get_min_load_slavenode()
+            if max_load_node.weight - min_load_node.weight < 2:
+                break
+            action_list = self.process_between_nodes(max_load_node, min_load_node)
+            scheduled_action_list += action_list
+
+        return scheduled_action_list;
+
+
+class IndexPlacementManager:
+    def __init__(self):
+        self.index_partitions = {}
+        self.index_partition_suites = {}
+        self.slavenodes = {}
+        self.failure_domains = {}
+
+        self.partition_to_node_map = {}
+        self.node_to_partition_map = {}
+
+        self.replicate_policy = DefaultReplicatePolicy(context=self)
+
+        self.action_list = []
+
+    def create_index_partition(self, id, meta):
+        if id in self.index_partitions:
+            LOG.warning('index partition [%s] already exists', id)
+            return None
+        new_partition = IndexPartition(id, type=meta['index_type'], layer=meta['index_layer'], 
+                size=10, 
+                replication_factor=int(meta['replication_factor']), 
+                group=meta['group'],
+                context=self)
+        self.index_partitions[id] = new_partition
+        LOG.info('index partition [%s] created', id)
+
+        return new_partition
+
+    def remove_index_partition(self, id):
+        pass
+    def create_slavenode(self, id, meta):
+        if id in self.slavenodes:
+            LOG.warning('search node [%s] already exists', id)
+            return None
+        try:
+            ip=socket.gethostbyname(id), 
+        except:
+            ip="127.0.0.1"
+
+        new_node = SlaveNode(id, 
+                ip=ip,
+                capacity=meta['cpu_capacity'], 
+                failure_domain=meta['failure_domain'], 
+                online=meta['online_state'], 
+                idc=meta["idc"], 
+                group=meta["group"],
+                context=self)
+        self.slavenodes[id] = new_node
+        LOG.info('search node [%s] created', id)
+
+        # classify new node to its failure domain
+        self.__classify_to_failure_domains(new_node)
+
+        return new_node
+    #TODO. rm this.
+    def rm_offline_slavenodes(self):
+        ''' remove offline slave nodes
+        >>> hjz=IndexPlacementManager()
+        >>> node1=SlaveNode(1, None, None, None, 'online', None, None, None)
+        >>> node2=SlaveNode(2, None, None, None, 'offline', None, None, None)
+        >>> hjz.slavenodes = {1:node1, 2:node2}
+        >>> hjz.rm_offline_slavenodes()
+        >>> None == hjz.slavenodes.get(1)
+        False
+        >>> None == hjz.slavenodes.get(2)
+        True
+        '''
+        for node in self.slavenodes.values():
+            if not 'online' == node.online:
+                self.__rm_from_failure_domain(node)
+                del self.slavenodes[node.id]
+
+    def remove_slavenode(self, id):
+        pass
+
+    def bind_index_partition_to_slavenode(self, index_partition_id, slavenode_id, state):
+        index_partition = self.get_index_partition(index_partition_id)
+        slavenode = self.get_slavenode(slavenode_id)
+        action = IndexPlacementAction('ADD', index_partition, None, slavenode)
+        action.execute()
+        self.action_list.append(action)
+    
+    def unbind_index_partition_from_slavenode(self, index_partition_id, slavenode_id):
+        index_partition = self.get_index_partition(index_partition_id)
+        slavenode = self.get_slavenode(slavenode_id)
+
+        action = IndexPlacementAction('DEL', index_partition, slavenode, None)
+        action.execute()
+        self.action_list.append(action)
+
+    def get_index_partition(self, id):
+        if id in self.index_partitions:
+            return self.index_partitions[id]
+        else:
+            return None
+    
+    def get_slavenode(self, id):
+        if id in self.slavenodes:
+            return self.slavenodes[id]
+        else:
+            return None
+
+    def failure_domain(self, id):
+        if id in self.failure_domains:
+            return self.failure_domains[id]
+        else:
+            return None
+
+    def __classify_to_failure_domains(self, node):
+        domain_id = node.failure_domain
+        if domain_id not in self.failure_domains:
+            self.failure_domains[domain_id] = FailureDomain(domain_id, context=self)
+        self.failure_domains[domain_id].add_slavenode(node.id)
+
+    def __rm_from_failure_domain(self, node):
+        if node.failure_domain in self.failure_domains:
+            self.failure_domains[node.failure_domain].rm_slavenode(node.id)
+
+    def rebalance_partitions(self):
+        for partition in self.index_partitions.values():
+            if partition.replication_factor < partition.replica_count_of_new_and_running():
+                tmp_actions = self.replicate_policy.process_over_replicated_partition(partition)
+                self.action_list.extend(tmp_actions)
+            elif partition.replication_factor > partition.replica_count_of_new_and_running():
+                tmp_actions = self.replicate_policy.process_under_replicated_partition(partition)
+                self.action_list.extend(tmp_actions)
+            else:
+                pass
+
+    def rebalance_nodes(self):
+        tmp_actions = self.replicate_policy.process_unevenly_loaded_node()
+        self.action_list.extend(tmp_actions)
+
+    def to_string(self):
+        for id, node in self.slavenodes.iteritems():
+            print '%s: [%s]' % (id, node.to_string())
+
+        for id, partition in self.index_partitions.iteritems():
+            print '%s: [%s]' % (id, partition.to_string())
+
+def parse_options(argv):
+    run_mode = 'rebalancement'
+    output_format = 'bash'
+
+    try:
+        opts, args = getopt.getopt(argv[1:], 'm:d:f:ht', ['run-mode=', 'dump-placement-plan-file=', 'output-format=', 'help', 'test'])
+    except:
+        usage()
+        sys.exit(1)
+
+    for k,v in opts:
+        if k == '-m' or k == '--run-mode':
+            run_mode = v           
+            if run_mode != 'rebalancement' and run_mode != 'full-replacement':
+                usage()
+                sys.exit(1)
+        elif k == '-f' or k == '--output-format':
+            output_format = v
+            if output_format != 'json' and output_format != 'bash':
+                usage()
+                sys.exit(1)
+        elif k == '-h' or k == '--help':
+            usage()
+            sys.exit(0)
+        elif k == '-t' or k == '--test':
+            import doctest
+            LOG.setLevel(logging.ERROR)
+            doctest.testmod()
+            sys.exit(0)
+        else:
+            usage()
+            sys.exit(1)
+
+    return (run_mode, output_format)
+
+def usage():
+    usage_message = \
+"""Generate snapshot of online index placement plan.
+
+Usage: placement_plan_generate.py -m|--run-mode -f|--output-format
+       placement_plan_generate.py -h|--help
+
+Options: 
+    -m|--run-mode       run-mode: rebalancement(default), full-replacement
+    -f|--output-format  output-format: bash(default), json
+    -t|--test           run unit tests
+    -h|--help           show this help 
+"""
+    print usage_message
+
+def is_valid_for_placement_plan(manager):
+    return is_valid_placement(manager, lambda groups:len(groups)==1, lambda idcs:len(idcs)==1)
+def is_valid_for_connection(manager):
+    return is_valid_placement(manager, lambda groups:len(groups)==1, lambda idcs:len(idcs)==2)
+def is_valid_placement(manager,group_check,idc_check):
+    groups=[]
+    idcs=[]
+    for slavenode in manager.slavenodes.values():
+        if not slavenode.group in groups:
+            groups.append(slavenode.group)
+        if not slavenode.idc in idcs:
+            idcs.append(slavenode.idc)
+    for index_partition in manager.index_partitions.values():
+        if not index_partition.group in groups:
+            groups.append(index_partition.group)
+    if group_check(groups) and idc_check(idcs):
+        return True
+    else:
+        sys.stderr.write('%s\n%s\n' % ('\n'.join(groups), '\n'.join(idcs)))
+        return False
+
+def build_index_placement_manager():
+    try:
+        placement_plan_snapshot = json.read(sys.stdin.read())
+    except Exception,e:
+        sys.stderr.write("invalid placement plan snapshot:%s\n" % e)
+        sys.exit(1)
+
+    manager = IndexPlacementManager()
+    for id, meta in placement_plan_snapshot['index_partition'].iteritems():
+        partition = manager.create_index_partition(id, meta)
+        
+    for id, meta in placement_plan_snapshot['slavenode'].iteritems():
+        node = manager.create_slavenode(id, meta)
+
+    #manager.rm_offline_slavenodes()
+
+    for id, meta in placement_plan_snapshot['slavenode'].iteritems():
+        node = manager.get_slavenode(id)
+        if None == node: continue
+        for instance in placement_plan_snapshot['placement'][id]:
+            partition = manager.get_index_partition(instance["partition"])
+            node.place_index_partition(partition.id, instance)
+            partition.place_at_node(node.id, instance["state"])
+    manager.action_list = []
+
+    return manager
+
+def simulate(in_name, act_name, io_out=sys.stdout):
+    '''read input and actions, then output the dest outlook
+    '''
+    plan=None
+    try:
+        plan=json.read(open(in_name).read())
+    except Exception,e:
+        sys.stderr.write('load json from in_name [%s] failed [%s]\n' % (in_name, e))
+    orig_csv = json_to_csv(plan)
+    actions=open(act_name).readlines()
+    nodes=plan['slavenode']
+    place=plan['placement']
+    for action in actions:
+        args=action.split()
+        if len(args) < 3:
+            sys.stderr.write('error cmd %s\n' % action)
+            return False
+        index=args[1]
+        node=args[2]
+        if action.startswith('ADD'):
+            place[node].append({"partition":index,"state":'NEW',"port":-1})
+        elif action.startswith('DEL'):
+            for i in range(len(place[node])):
+                if place[node][i]["partition"] == index:
+                    del place[node][i]
+                    break
+        elif action.startswith('MOVE'):
+            node2=args[3]
+            for i in range(len(place[node])):
+                if place[node][i]["partition"] == index:
+                    del place[node][i]
+                    break
+            place[node2].append({"partition":index,"state":'NEW',"port":-1})
+    later_csv = json_to_csv(plan)
+    note='note' in plan and plan['note'] or ''
+    io_out.write('Orig:\n%s\n\nLater:\n%s\n\nActions:\n%s\n\nNote:\n%s' %  
+            (orig_csv, later_csv, ''.join(actions), note))
+def json_to_csv(obj):
+    '''convert the json placement to csv format.
+    '''
+    place=obj['placement']
+    nodes=obj['slavenode']
+    dbs={}
+    result=[]
+    sorted_nodes=place.keys()
+    sorted_nodes.sort()
+    for node in sorted_nodes:
+        result.append( '%s' % node )
+        if not nodes[node]['online_state'] == 'online':
+            result.append( '(%s)' % (nodes[node]['online_state']))
+        sorted_place=place[node]
+        sorted_place.sort()
+        for block in sorted_place:
+            dbs.setdefault(block["partition"],[])
+            dbs[block["partition"]].append('%s(%s)' % ((node,block["state"]) ))
+            result.append(',%s(%s)' % (block["partition"],block["state"]))
+        result.append( '\n' )
+    sorted_db=dbs.keys()
+    sorted_db.sort()
+    for block in sorted_db:
+        result.append( '%s' % block )
+        for instance in dbs[block]:
+            result.append( ',%s' % instance )
+        result.append( '\n' )
+    return ''.join(result)
+
+
+def main():
+    run_mode, output_format = parse_options(sys.argv)
+    manager = build_index_placement_manager()
+
+    if not is_valid_for_placement_plan(manager):
+        sys.stderr.write("invalid placement plan snapshot: use --group-id=xxx --idc-id=yyy to dump\n")
+        sys.exit(1)
+
+    if run_mode == 'full-replacement':
+        for node in manager.slavenodes.values():
+            for partition in node.index_partitions():
+                manager.unbind_index_partition_from_slavenode(partition.id, node.id)
+
+    manager.rebalance_partitions()
+    manager.rebalance_nodes()
+
+    for action_item in manager.action_list:
+        if output_format == 'bash':
+            sys.stdout.write(action_item.to_string())
+        else:
+            sys.stdout.write(action_item.to_json())
+        sys.stdout.write('\n')
+
+if __name__ == '__main__':
+    main()
+
+
+

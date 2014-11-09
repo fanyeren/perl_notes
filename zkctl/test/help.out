@@ -1,0 +1,27 @@
+zkctl utility
+
+Usage: zkctl <OBJECT> <ACTION> [options]
+       zkctl <OBJECT> <ACTION> --help
+
+Valid OBJECTs: 
+    cluster
+    slavenode
+    service
+    service-instance
+    index-type
+    index-partition
+    index
+    idc
+    group
+    job
+    binary
+    dyndata-meta
+    dyndata
+    placement-plan
+    blacklist
+    connection
+    crontab
+
+For more information, refer to:
+http://wiki.babel.baidu.com/twiki/bin/view/Ps/Main/DOPZookeeperAPIDesign 
+

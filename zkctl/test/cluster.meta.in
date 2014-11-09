@@ -1,0 +1,27 @@
+#!/bin/bash
+./zkctl -s cluster repair
+./zkctl -w cluster set-meta-all --data={}
+
+raw='"bs_deploy_dyndata_script_bandwidth_limit":"10240","bs_deploy_dyndata_script_timeout":"100","bs_deploy_script_bandwidth_limit":"10240","bs_deploy_script_timeout":"600","bs_healthcheck_script_timeout":"10","bs_reload_script_timeout":"30","bs_start_script_timeout":"300","bs_stop_script_timeout":"30","bs_switchdb_script_timeout":"10","bs_transdb_script_bandwidth_limit":"10240","bs_transdb_script_timeout":"3600"'
+
+for item in `echo $raw|tr -s "," " "`; do
+    rawkv=`echo $item|tr -d \" | tr -s ":" " "`
+    kv=($rawkv)
+    ./zkctl -w cluster add-meta-attr --key=${kv[0]} --value=${kv[1]}
+    echo "Add meta ${kv[0]}=${kv[1]} result $?"
+    ./zkctl -w cluster get-meta-attr --key=${kv[0]}
+    echo "Get meta ${kv[0]}=${kv[1]} result $?"
+done
+
+./zkctl -s cluster get-meta-all
+echo "got all cluster result result=$?"
+
+for item in `echo $raw|tr -s "," " "`; do
+    rawkv=`echo $item|tr -d \" | tr -s ":" " "`
+    kv=($rawkv)
+    ./zkctl -w cluster del-meta-attr --key=${kv[0]}
+    echo "del meta attr ${kv[0]} result=$?"
+done
+
+./zkctl -s cluster get-meta-all
+echo "got empty cluster result result=$?"

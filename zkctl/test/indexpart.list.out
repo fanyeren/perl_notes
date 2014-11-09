@@ -1,0 +1,16 @@
+Add with no index-type
+index-partition dnews_0 add failed, it may be exist already
+Add with no index-type failed: result=1
+add index type succedd result=0
+Add with right index-type succeed: result=0
+dnews_0
+se_3
+vip_1
+wp_2
+index-type del failed, probally has child
+delete should failed. result=1
+delete index partition. result=0
+dnews_0
+se_3
+vip_1
+Delete already deleted result=0

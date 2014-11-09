@@ -1,0 +1,53 @@
+#!/bin/bash
+source $(dirname $0)/common
+
+node_clear slavenode
+node_clear idc
+node_clear group
+
+./zkctl -w slavenode add --slavenode-id=n1 --data={}
+./zkctl -w slavenode add --slavenode-id=n2 --data={}
+./zkctl -w slavenode add --slavenode-id=n3 --data={}
+./zkctl -w slavenode add --slavenode-id=n4 --data={}
+./zkctl -s slavenode list | sort
+./zkctl -w slavenode del --slavenode-id=n3
+./zkctl -s slavenode list | sort
+./zkctl -s slavenode list --idc-id=jx 2>&1
+echo "list slavenode with error idc result=$?"
+
+node_clear slavenode
+./zkctl -w slavenode add --slavenode-id=n1 --data='{"idc":"jx","group":"group_1"}'
+./zkctl -w slavenode add --slavenode-id=n2 --data='{"idc":"jx","group":"group_1"}'
+./zkctl -w slavenode add --slavenode-id=n3 --data='{"idc":"jx","group":"group_2"}'
+./zkctl -w slavenode add --slavenode-id=n4 --data='{"idc":"jx","group":"group_2"}'
+./zkctl -w slavenode add --slavenode-id=n5 --data='{"idc":"tc","group":"group_1"}'
+./zkctl -w slavenode add --slavenode-id=n6 --data='{"idc":"tc","group":"group_1"}'
+./zkctl -w slavenode add --slavenode-id=n7 --data='{"idc":"tc","group":"group_2"}'
+./zkctl -w slavenode add --slavenode-id=n8 --data='{"idc":"tc","group":"group_2"}'
+
+#filter with idc
+./zkctl -s slavenode list --idc-id=jx 2>&1
+echo "list slavenode with invalid idc failed, result=$?"
+./zkctl -w idc add --idc-id=jx  2>&1
+./zkctl -w idc add --idc-id=jx --data={}
+./zkctl -w idc add --idc-id=tc --data={}
+./zkctl -s slavenode list --idc-id=jx
+echo "Got slavenode id idc jx result=$?"
+./zkctl -s slavenode list --idc-id=tc
+echo "Got slavenode id idc tc result=$?"
+
+#filter with group
+./zkctl -s slavenode list --idc-id=jx 2>&1
+echo "got slavenode with empty group failed result=$?"
+./zkctl -w group add --group-id=group_1 --data={}
+./zkctl -w group add --group-id=group_2 --data={}
+./zkctl -s slavenode list --group-id=group_1
+echo "Got slavenode id group group_1 result=$?"
+
+#filter with idc and group
+./zkctl -s slavenode list --idc-id=jx --group-id=group_2
+echo "Got slavenode id idc jx, group group_2 result=$?"
+
+node_clear slavenode
+node_clear group
+node_clear idc

@@ -1,0 +1,14 @@
+#! /bin/bash
+
+source "public.inc"
+
+if [ "x$1" == "x" ]; then
+	for t in `${ZKCTL_BIN} dyndata-meta list`; do 
+		${ZKCTL_BIN} dyndata-meta list-dyndata --dyndata-meta-id=$t
+	done
+else
+	for t in `${ZKCTL_BIN} dyndata-meta list`; do 
+		${ZKCTL_BIN} dyndata-meta list-dyndata --dyndata-meta-id=$t
+	done | grep $1
+fi
+

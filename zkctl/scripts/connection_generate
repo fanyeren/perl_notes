@@ -1,0 +1,45 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#generate a bc-bs connection json
+#Usage
+# 1. ./zkctl placement-plan dump > dump.hjz
+# 2. ./zkctl connection refresh < dump.hjz > bcbs.json
+# 3. YIIC applyconnection applyall --file=bcbs.json
+# YIIC="/home/work/zooman/bin/protected/yiic"
+
+import json
+import sys
+import os
+import imp
+from connection import *
+from StringIO import StringIO
+
+if __name__=='__main__':
+    zknode=get_conf_node()
+    handler=imp.load_source('zk_plan', '.', open('placement-plan_generate'))
+    manager=handler.build_index_placement_manager()
+    if not handler.is_valid_for_connection(manager):
+        sys.stderr.write("invalid placement plan snapshot: use --group-id=xxx to dump\n")
+        sys.exit(1)
+
+    #find groups
+    groups={}
+    sorted_index_partitions=manager.index_partitions.values()
+    sorted_index_partitions.sort(cmp_func_id)
+    for index in sorted_index_partitions:
+        if not index.group in groups:
+            groups[index.group] = [index.id]
+        else:
+            groups[index.group].append(index.id)
+    json_root={}
+    json_new={}
+    #for each group
+    for group in groups:
+        for idc in ('jx','tc'):
+            json_obj=update_yiic(manager, group,idc)
+            json_new['%s/%s/%s' % (zknode, group, idc)]=json.write(json_obj)
+    json_root["new"]=json_new
+    json_root["old"]={}
+    print json.write(json_root)
+
+

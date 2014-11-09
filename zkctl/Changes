@@ -1,0 +1,13 @@
+2012-02-16: zkctl
+    1. add bc
+    ./yiic zkapi addhost --host=cq01-2011q4-setest3-3.vm --data={}
+    ./yiic zkapi add --module=bc --setkv=serv_for:jx,port:4428,group:1,status:online --host=cq01-2011q4-setest3-3.vm
+    2. set connection
+    ./zkctl -s placement-plan dump --group=group_1 | ./zkctl connection generate > conn.json
+    ./zkctl connection commit conn.json
+
+2012-02-06: zksh is ready
+    1. log to stdout
+    2. log to ullog
+    3. log to zoo.log
+    ./zkctl cluster create-semephore --key=bash_lock --resource-num=1

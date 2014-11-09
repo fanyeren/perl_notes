@@ -1,0 +1,16 @@
+#!/bin/bash
+source $(dirname $0)/common
+
+TYPE=index-type
+node_clear $TYPE
+
+./zkctl -w $TYPE add --$TYPE-id=dnews --data={}
+./zkctl -w $TYPE add --$TYPE-id=wp --data={}
+./zkctl -w $TYPE add --$TYPE-id=vip --data={}
+./zkctl -w $TYPE add --$TYPE-id=se --data={}
+echo "add $TYPE result=$?"
+./zkctl -w $TYPE list | sort
+echo "list $TYPE result=$?"
+./zkctl -w $TYPE del --$TYPE-id=wp
+echo "del $TYPE result=$?"
+./zkctl -w $TYPE list | sort

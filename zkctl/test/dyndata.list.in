@@ -1,0 +1,35 @@
+#!/bin/bash
+source $(dirname $0)/common
+
+TYPE=dyndata-meta
+node_clear $TYPE
+
+./zkctl -w $TYPE add --$TYPE-id=brief    --data='{"target_module":"bc","reload_command":"-t 60"}'
+./zkctl -w $TYPE add --$TYPE-id=mcdict   --data='{"target_module":"bc","reload_command":"-c 1 -p 4428"}'
+./zkctl -w $TYPE add --$TYPE-id=strategy --data='{"target_module":"bc","reload_command":"-c 2 -p 1234"}'
+./zkctl -w $TYPE list | sort
+
+
+./zkctl -w dyndata add --dyndata-id=error_id --data='{"hello":"hjz"}' 2>&1
+./zkctl -w dyndata add --dyndata-id=brief_2012 --data='{"hello":"hjz"}'
+./zkctl -w dyndata add --dyndata-id=brief_2013 --data='{"hello":"hjz"}'
+#1.data
+./zkctl -w dyndata add --dyndata-id=brief_2014 --data='{"hello":"hjz"}'
+./zkctl -w dyndata get-meta-all --dyndata-id=brief_2014
+#2.default-data
+./zkctl -w dyndata add --dyndata-id=brief_2015
+./zkctl -w dyndata get-meta-all --dyndata-id=brief_2015
+#3.default+kvs
+./zkctl -w dyndata add --dyndata-id=brief_2016 --key=a1 --value=b2 --key=a2 --value=b3
+./zkctl -s dyndata get-meta-all --dyndata-id=brief_2016
+#4.data+kvs
+./zkctl -w dyndata add --dyndata-id=brief_2017 --data='{"a":"1"}' --key=b --value=2 --key=c --value=3
+./zkctl -s dyndata get-meta-all --dyndata-id=brief_2017
+
+./zkctl -w dyndata-meta list-dyndata --dyndata-meta-id=brief
+
+./zkctl -w dyndata-meta del --dyndata-meta-id=brief 2>&1
+./zkctl -w dyndata-meta del --dyndata-meta-id=mcdict
+
+node_clear dyndata
+node_clear dyndata-meta

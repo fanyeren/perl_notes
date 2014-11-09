@@ -1,0 +1,45 @@
+#!/bin/bash
+source $(dirname $0)/common
+TYPE=service-instance
+XVALUE=bs_dnews_3
+raw='"dyndata":{"brief":{"location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/dbtest\/dict\/dict2\/dict_old\/wp_0\/brief\/.list","prework":"bs_check_urllist","relativepath":"db\/gi\/data\/info","reloadcmd":"-t authority -o 60","timestamp":"201112142020"},"mask_url":{"location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/dbtest\/dict\/dict2\/dict_old\/wp_0\/mask_url\/.list","prework":"bs_check_urllist","relativepath":"db\/gi\/data\/info","reloadcmd":"-t mask -o 60","timestamp":"201112142020"},"zhannei":{"location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/dict\/wp_0\/zhannei\/.list","prework":"","relativepath":"conf\/bsdict","reloadcmd":"-t zhannei:mof","timestamp":"201112141818"}},"future_index_version":"V6","future_location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/dbtest\/db\/wp\/wp_15","future_timestamp":"201112142020","online_index_version":"V6","online_location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/dbtest\/db\/wp\/wp_15","online_timestamp":"201112142020","up_down_state":"up","version":{"V6":{"service_location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/deploy\/dnews\/service_1_2","service_version":"service_1_2_dnewb"}}'
+
+node_clear $TYPE
+node_clear service
+node_clear slavenode
+
+./zkctl -w slavenode add --slavenode-id=hankjin.vicp.net --data={}
+./zkctl -w service add --service-id=$XVALUE --data={}
+VALUE=$(./zkctl -w $TYPE add --service-id=$XVALUE --slavenode-id=hankjin.vicp.net --data={})
+./zkctl -w $TYPE set-planned-state-all --$TYPE-id=$VALUE --data="{$raw}"
+./zkctl -w $TYPE get-planned-state-all --$TYPE-id=$VALUE 
+
+./zkctl -w $TYPE add-planned-state-attr --$TYPE-id=$VALUE --key=dyndata.brief.mydict --value='{"hank":"hjz"}'
+echo "Add state dyndata.brief.mydict result $?"
+./zkctl -w $TYPE get-planned-state-attr --$TYPE-id=$VALUE --key=dyndata.brief.mydict
+echo "Get state dyndata.brief.mydict result $?"
+./zkctl -w $TYPE add-planned-state-attr --$TYPE-id=$VALUE --key=dyndata.brief.mydict --value='{"hank":"hjz"}' 2>&1
+echo "Add added state dyndata.brief.mydict, should failed, result $?"
+./zkctl -w $TYPE set-planned-state-attr --$TYPE-id=$VALUE --key=dyndata.brief.mydict --value=somebody
+echo "Set state dyndata.brief.mydict result $?"
+./zkctl -w $TYPE get-planned-state-attr --$TYPE-id=$VALUE --key=dyndata.brief.mydict
+echo "Get state dyndata.brief.mydict result $?"
+./zkctl -w $TYPE del-planned-state-attr --$TYPE-id=$VALUE --key=dyndata.brief.mydict
+echo "Del state dyndata.brief.mydict result $?"
+./zkctl -w $TYPE del-planned-state-attr --$TYPE-id=$VALUE --key=dyndata.brief.mydict 2>&1
+echo "Del deleted state dyndata.brief.mydict, should failed, result $?"
+
+./zkctl -w $TYPE get-planned-state-all --$TYPE-id=$VALUE 
+echo "got all state $TYPE result result=$?"
+
+./zkctl -w $TYPE set-planned-state-all --$TYPE-id=$VALUE  --data={}
+echo "set empty state result=$?"
+
+./zkctl -w $TYPE get-planned-state-all --$TYPE-id=$VALUE 
+echo "got empty $TYPE result result=$?"
+
+./zkctl -w $TYPE del --$TYPE-id=$VALUE
+
+node_clear $TYPE
+node_clear service
+node_clear slavenode

@@ -1,0 +1,14 @@
+#! /bin/bash
+
+source "public.inc"
+
+if [ "x$1" == "x" ]; then
+	for t in `${ZKCTL_BIN} index-type list`; do 
+		${ZKCTL_BIN} index-type list-index-partition --index-type-id=$t
+	done
+else
+	for t in `${ZKCTL_BIN} index-type list`; do 
+		${ZKCTL_BIN} index-type list-index-partition --index-type-id=$t
+	done | grep $1
+fi
+

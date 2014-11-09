@@ -1,0 +1,232 @@
+#! /bin/bash
+
+PROGNAME=${0##*/} 
+
+function usage() 
+{ 
+cat <<EOF 
+Apply a placement plan to zookeeper.
+
+Usage: ${PROGNAME} 
+       ${PROGNAME} -h|--help
+
+Options: 
+EOF
+cat <<EOF | column -s\& -t 
+    -h|--help & show this help 
+EOF
+echo
+} 
+
+
+
+## parse arguments and options
+SHORTOPTS="h"
+LONGOPTS="help"
+
+TEMP=`getopt --options ${SHORTOPTS} --longoptions ${LONGOPTS} --name ${PROGNAME} -- "$@"`
+[ $? -ne 0 ] &&    usage && exit 1
+
+eval set -- "$TEMP"
+while true ; do
+    case "$1" in
+        -h|--help) usage; exit 0;;
+        --) shift ; break ;;
+        *) usage; exit 1 ;;
+    esac
+done
+
+
+## start working
+source "public.inc"
+
+function check_slavenode_exist()
+{
+    return 0
+}
+function rm_from_job_list()
+{
+    local SERVICE_INSTANCE_ID="$1"
+    ${ZKCTL_BIN} job add --job-id=plan_add --data='{}' 2>/dev/null
+    ${ZKCTL_BIN} job add --job-id=plan_del --data='{}' 2>/dev/null
+    ${ZKCTL_BIN} job del-meta-attr --job-id=plan_add --key=${SERVICE_INSTANCE_ID} 2>/dev/null
+    ${ZKCTL_BIN} job del-meta-attr --job-id=plan_del --key=${SERVICE_INSTANCE_ID} 2>/dev/null
+}
+function put_to_job_list_add()
+{
+    local SERVICE_INSTANCE_ID="$1"
+    local PARTITION_ID="$2"
+    rm_from_job_list ${SERVICE_INSTANCE_ID}
+    ${ZKCTL_BIN} job add-meta-attr --job-id=plan_add --key=${SERVICE_INSTANCE_ID} --value=${PARTITION_ID}
+    log_msg "${SERVICE_INSTANCE_ID}:${PARTITION_ID} is add to plan_add"
+}
+function put_to_job_list_del()
+{
+    local SERVICE_INSTANCE_ID="$1"
+    local PARTITION_ID="$2"
+    rm_from_job_list ${SERVICE_INSTANCE_ID}
+    ${ZKCTL_BIN} job add-meta-attr --job-id=plan_del --key=${SERVICE_INSTANCE_ID} --value=${PARTITION_ID}
+    log_msg "${SERVICE_INSTANCE_ID}:${PARTITION_ID} is add to plan_del"
+}
+
+function exit_if_not_exist()
+{
+    local PARTITION="$1"
+    local SLAVENODE="$2"
+    local RET=$(${ZKCTL_BIN} slavenode list-service-instance --slavenode-id=${SLAVENODE} | grep ${PARTITION}- | wc -l )
+    if [ $RET -eq 0 ]; then
+        echo "${PARTITION} not exist in ${SLAVENODE}, exit apply"
+        exit 1
+    fi
+}
+function exit_if_exist()
+{
+    local PARTITION="$1"
+    local SLAVENODE="$2"
+    local RET=$(${ZKCTL_BIN} slavenode list-service-instance --slavenode-id=${SLAVENODE} | grep ${PARTITION}- | wc -l )
+    if [ $RET -ne 0 ]; then
+        echo "${PARTITION} already exist in ${SLAVENODE}, exit apply"
+        exit 1
+    fi
+}
+
+function add_index_to_slavenode()
+{
+    INDEX_PARTITION_ID="$1"
+    SLAVENODE_ID="$2"
+    PLANNED_STATE="$3"
+
+    # pre-checking
+    ${ZKCTL_BIN} slavenode get-meta-all --slavenode-id=${SLAVENODE_ID} >/dev/null
+    [ $? -ne 0 ] && echo "slavenode ${SLAVENODE_ID} not exists" && return 1
+    ${ZKCTL_BIN} index-partition get-meta-all --index-partition-id=${INDEX_PARTITION_ID} >/dev/null
+    [ $? -ne 0 ] && echo "index partition ${INDEX_PARTITION_ID} not exists" && return 1
+
+    exit_if_exist ${INDEX_PARTITION_ID} ${SLAVENODE_ID}
+
+    # prepare service instance meta data
+    SERVICE_ID="bs_${INDEX_PARTITION_ID}"
+    INDEX_TYPE_ID=${INDEX_PARTITION_ID%%_[0-9]*}
+    INDEX_CATEGORY=$(${ZKCTL_BIN} index-type get-meta-attr --index-type-id=${INDEX_TYPE_ID} --key=category)
+    [ $? -ne 0 ] && echo "${INDEX_TYPE_ID} get meta attribute \"category\" failed." && return 1
+    TRANS_DB_PRIORITY=$(${ZKCTL_BIN} index-type get-meta-attr --index-type-id=${INDEX_TYPE_ID} --key=trans_db_priority)
+    [ $? -ne 0 ] && echo "${INDEX_TYPE_ID} get meta attribute \"trans_db_priority\" failed." && return 1
+    TRANS_DB_TIMEOUT=$(${ZKCTL_BIN} index-type get-meta-attr --index-type-id=${INDEX_TYPE_ID} --key=trans_db_timeout)
+    [ $? -ne 0 ] && echo "${INDEX_TYPE_ID} get meta attribute \"trans_db_timeout\" failed." && return 1
+
+    SERVICE_INSTANCE_META=$(cat <<EOF
+{   
+    "category": "${INDEX_CATEGORY}",
+    "service_id": "${SERVICE_ID}",
+    "slavenode_id": "",
+    "state": "NEW",
+    "trans_db_priority": "${TRANS_DB_PRIORITY}",
+    "trans_db_timeout": "${TRANS_DB_TIMEOUT}"
+}
+EOF)
+
+    # create service instance
+    NEW_SERVICE_INSTANCE_ID=$(${ZKCTL_BIN} service-instance add --service-id=${SERVICE_ID} --slavenode-id=${SLAVENODE_ID} --data="${SERVICE_INSTANCE_META}")
+    [ $? -ne 0 ] && echo "${SERVICE_ID} create service instance failed." && return 1
+
+    # set default planned state if no planned state specified.
+    if [ "x${PLANNED_STATE}" == "x" ]; then
+        PLANNED_STATE=$(${ZKCTL_BIN} service get-default-planned-state-all --service-id=${SERVICE_ID})
+        [ $? -ne 0 ] && echo "${SERVICE_ID} get default-planned-state-all failed." && return 1
+        [ "x${PLANNED_STATE}" == "x" ] && echo "${SERVICE_ID} default-planned-state-all is null" && return 1
+    fi
+    ${ZKCTL_BIN} service-instance set-planned-state-all --service-instance-id=${NEW_SERVICE_INSTANCE_ID} --data="${PLANNED_STATE}"
+    [ $? -ne 0 ] && echo "set default planned state to ${SERVICE_ID} failed." && return 1
+
+    put_to_job_list_add ${NEW_SERVICE_INSTANCE_ID} ${INDEX_PARTITION_ID}
+    log_msg "add ${SLAVENODE_ID}:${NEW_SERVICE_INSTANCE_ID} of ${INDEX_PARTITION_ID}"
+    
+    echo ${NEW_SERVICE_INSTANCE_ID}
+    return 0
+}
+
+function delete_index_from_slavenode()
+{
+    INDEX_PARTITION_ID=$1
+    SLAVENODE_ID=$2
+
+    # pre-checking
+    ${ZKCTL_BIN} slavenode get-meta-all --slavenode-id=${SLAVENODE_ID} >/dev/null
+    [ $? -ne 0 ] && echo "slavenode ${SLAVENODE_ID} not exists" && return 1
+    ${ZKCTL_BIN} index-partition get-meta-all --index-partition-id=${INDEX_PARTITION_ID} >/dev/null
+    [ $? -ne 0 ] && echo "index partition ${INDEX_PARTITION_ID} not exists" && return 1
+
+    exit_if_not_exist ${INDEX_PARTITION_ID} ${SLAVENODE_ID}
+
+    # get service instance id
+    # assuming that index placed at slavenode once.
+    SERVICE_INSTANCE_ID=$(${ZKCTL_BIN} slavenode list-service-instance --slavenode-id=${SLAVENODE_ID} | grep ${INDEX_PARTITION_ID})
+    [ $? -ne 0 ] && [ "x${SERVICE_INSTANCE_ID}" == "x" ] && echo "${INDEX_PARTITION_ID} service instance not found at ${SLAVENODE_ID}" && return 1
+
+    ${ZKCTL_BIN} service-instance set-meta-attr --service-instance-id=${SERVICE_INSTANCE_ID} --key=state --value=TO_BE_DELETED
+    [ $? -ne 0 ] && echo "${INDEX_PARTITION_ID} set meta attribute \"state\" failed." && return 1
+
+    put_to_job_list_del ${SERVICE_INSTANCE_ID} ${INDEX_PARTITION_ID}
+    log_msg "delete ${SLAVENODE_ID}:${SERVICE_INSTANCE_ID}"
+
+    echo ${SERVICE_INSTANCE_ID}
+    return 0
+}
+
+function move_index_between_slavenode()
+{
+    INDEX_PARTITION_ID="$1"
+    SRC_SLAVENODE_ID="$2"
+    DEST_SLAVENODE_ID="$3"
+
+    # pre-checking
+    ${ZKCTL_BIN} slavenode get-meta-all --slavenode-id=${SRC_SLAVENODE_ID} >/dev/null
+    [ $? -ne 0 ] && log_err "${SRC_SLAVENODE_ID} slavenode not exists" && return 1
+    ${ZKCTL_BIN} slavenode get-meta-all --slavenode-id=${DEST_SLAVENODE_ID} >/dev/null
+    [ $? -ne 0 ] && log_err "${DEST_SLAVENODE_ID} slavenode not exists" && return 1
+    ${ZKCTL_BIN} index-partition get-meta-all --index-partition-id=${INDEX_PARTITION_ID} >/dev/null
+    [ $? -ne 0 ] && log_err "index partition ${INDEX_PARTITION_ID} not exists" && return 1
+
+    exit_if_not_exist ${INDEX_PARTITION_ID} ${SRC_SLAVENODE_ID}
+    exit_if_exist ${INDEX_PARTITION_ID} ${DEST_SLAVENODE_ID}
+
+    # get source service instance id
+    # assuming that index placed at slavenode once.
+    SERVICE_INSTANCE_ID=$(${ZKCTL_BIN} slavenode list-service-instance --slavenode-id=${SRC_SLAVENODE_ID} | grep ${INDEX_PARTITION_ID})
+    [ $? -ne 0 ] && [ "x${SERVICE_INSTANCE_ID}" == "x" ] && log_err "${INDEX_PARTITION_ID} service instance not found at ${SRC_SLAVENODE_ID}" && return 1
+
+    # get planned state of source service instance.
+    PLANNED_STATE=$(${ZKCTL_BIN} service-instance get-planned-state-all --service-instance-id=${SERVICE_INSTANCE_ID})
+    [ $? -ne 0 ] && log_err "${INDEX_PARTITION_ID} get meta data failed." && return 1
+
+    # delete from source slavenode 
+    SRC_SERVICE_INSTANCE_ID=$(delete_index_from_slavenode ${INDEX_PARTITION_ID} ${SRC_SLAVENODE_ID})
+    [ $? -ne 0 ] && log_err "${INDEX_PARTITION_ID} delete from slavenode ${SRC_SLAVENODE_ID} failed." && return 1
+
+    # add to dest slavenode with planned state
+    DEST_SERVICE_INSTANCE_ID=$(add_index_to_slavenode ${INDEX_PARTITION_ID} ${DEST_SLAVENODE_ID} "${PLANNED_STATE}")
+    [ $? -ne 0 ] && log_err "${INDEX_PARTITION_ID} add to slavenode ${SRC_SLAVENODE_ID} failed." && return 1
+
+    log_msg "move ${SRC_SLAVENODE_ID}:${SRC_SERVICE_INSTANCE_ID} to ${DEST_SLAVENODE_ID}:${DEST_SERVICE_INSTANCE_ID}"
+    put_to_job_list_del ${SRC_SERVICE_INSTANCE_ID} ${INDEX_PARTITION_ID}
+    echo ${SRC_SERVICE_INSTANCE_ID}
+    put_to_job_list_add ${DEST_SERVICE_INSTANCE_ID} ${INDEX_PARTITION_ID}
+    echo ${DEST_SERVICE_INSTANCE_ID}
+    return 0
+}
+
+cat | while read ONE_LINE 
+do
+        eval set "${ONE_LINE}"
+        case "$1" in
+            ADD)    add_index_to_slavenode $2 $3;
+                    ;;
+            DEL)    delete_index_from_slavenode $2 $3;
+                    ;;
+            MOVE)    move_index_between_slavenode $2 $3 $4;
+                    ;;
+        esac
+done
+
+
+

@@ -1,0 +1,57 @@
+#!/bin/bash
+
+TMP=tmp.conn
+cat > $TMP <<EOF
+{
+    "index_partition" : {
+        "wp_0" : {"group":"group_1","index_layer":"layer1","index_type":"wp","replication_factor":"1"},
+            "wp_1" : {"group":"group_1","index_layer":"layer1","index_type":"wp","replication_factor":"1"},
+            "dnews_10" : {"group":"group_1","index_layer":"layer1","index_type":"dnews","replication_factor":"1"},
+            "dnews_5" : {"group":"group_1","index_layer":"layer1","index_type":"dnews","replication_factor":"1"},
+            "dnews_4" : {"group":"group_1","index_layer":"layer1","index_type":"dnews","replication_factor":"1"},
+            "dnews_3" : {"group":"group_1","index_layer":"layer1","index_type":"dnews","replication_factor":"1"},
+            "dnews_2" : {"group":"group_1","index_layer":"layer1","index_type":"dnews","replication_factor":"1"},
+            "dnews_1" : {"group":"group_1","index_layer":"layer1","index_type":"dnews","replication_factor":"1"},
+            "dnews_0" : {"group":"group_1","index_layer":"layer1","index_type":"dnews","replication_factor":"1"}
+    },
+        "slavenode" : {
+            "cq01-2011q4-setest3-11.vm.baidu.com" : {"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"\/home","failure_domain":"default","flash_capacity
+                ":"640G","flash_path":"\/ssd1","group":"group_1","idc":"tc","online_state":"online","safe-mode":"off","work_path":"\/home\/work\/search"},
+            "cq01-2011q4-setest3-3.vm.baidu.com" : {"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"\/home","failure_domain":"default","flash_capacity"
+                :"640G","flash_path":"\/ssd1","group":"group_1","idc":"jx","online_state":"online","safe-mode":"off","work_path":"\/home\/work\/search"},
+            "cq01-2011q4-setest3-4.vm.baidu.com" : {"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"\/home","failure_domain":"default","flash_capacity"
+                :"640G","flash_path":"\/ssd1","group":"group_1","idc":"jx","online_state":"online","safe-mode":"off","work_path":"\/home\/work\/search"},
+            "cq01-2011q4-setest3-13.vm.baidu.com" : {"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"\/home","failure_domain":"default","flash_capacity
+                ":"640G","flash_path":"\/ssd1","group":"group_1","idc":"tc","online_state":"online","safe-mode":"off","work_path":"\/home\/work\/search"},
+            "cq01-2011q4-setest3-14.vm.baidu.com" : {"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"\/home","failure_domain":"default","flash_capacity
+                ":"640G","flash_path":"\/ssd1","group":"group_1","idc":"tc","online_state":"online","safe-mode":"off","work_path":"\/home\/work\/search"},
+            "cq01-2011q4-setest3-2.vm.baidu.com" : {"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"\/home","failure_domain":"default","flash_capacity"
+                :"640G","flash_path":"\/ssd1","group":"group_1","idc":"jx","online_state":"online","safe-mode":"off","work_path":"\/home\/work\/search"},
+            "cq01-2011q4-setest3-1.vm.baidu.com" : {"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"\/home","failure_domain":"default","flash_capacity"
+                :"640G","flash_path":"\/ssd1","group":"group_1","idc":"jx","online_state":"online","safe-mode":"off","work_path":"\/home\/work\/search"},
+            "cq01-2011q4-setest3-15.vm.baidu.com" : {"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"\/home","failure_domain":"default","flash_capacity
+                ":"640G","flash_path":"\/ssd1","group":"group_1","idc":"tc","online_state":"online","safe-mode":"off","work_path":"\/home\/work\/search"},
+            "cq01-2011q4-setest3-5.vm.baidu.com" : {"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"\/home","failure_domain":"default","flash_capacity"
+                :"640G","flash_path":"\/ssd1","group":"group_1","idc":"jx","online_state":"online","safe-mode":"off","work_path":"\/home\/work\/search"},
+            "cq01-2011q4-setest3-12.vm.baidu.com" : {"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"\/home","failure_domain":"default","flash_capacity
+                ":"640G","flash_path":"\/ssd1","group":"group_1","idc":"tc","online_state":"online","safe-mode":"off","work_path":"\/home\/work\/search"}
+        },
+        "placement" : {
+            "cq01-2011q4-setest3-11.vm.baidu.com" : [{"partition":"wp_0", "state":"NEW", "service_port":"11425"}, {"partition":"dnews_0", "state":"RUNNING", "service_port":"11441"}],
+            "cq01-2011q4-setest3-3.vm.baidu.com" : [{"partition":"dnews_4", "state":"TO_BE_DELETED", "service_port":"11425"}, {"partition":"dnews_3", "state":"RUNNING", "service_port":"11441"}
+            ],
+                "cq01-2011q4-setest3-4.vm.baidu.com" : [{"partition":"dnews_2", "state":"RUNNING", "service_port":"11425"}],
+                "cq01-2011q4-setest3-13.vm.baidu.com" : [{"partition":"dnews_3", "state":"RUNNING", "service_port":"11425"}, {"partition":"dnews_4", "state":"RUNNING", "service_port":"11441"
+                }],
+                "cq01-2011q4-setest3-14.vm.baidu.com" : [{"partition":"dnews_2", "state":"RUNNING", "service_port":"11425"}, {"partition":"dnews_10", "state":"RUNNING", "service_port":"11441"}],
+                "cq01-2011q4-setest3-2.vm.baidu.com" : [{"partition":"dnews_5", "state":"RUNNING", "service_port":"11425"}, {"partition":"wp_1", "state":"RUNNING", "service_port":"11441"}],
+                "cq01-2011q4-setest3-1.vm.baidu.com" : [{"partition":"wp_0", "state":"TO_BE_DELETED", "service_port":"11425"}, {"partition":"dnews_0", "state":"RUNNING", "service_port":"11441"}],
+                "cq01-2011q4-setest3-15.vm.baidu.com" : [{"partition":"dnews_1", "state":"RUNNING", "service_port":"11425"}, {"partition":"dnews_10", "state":"RUNNING", "service_port":"11441"}],
+                "cq01-2011q4-setest3-5.vm.baidu.com" : [{"partition":"dnews_1", "state":"RUNNING", "service_port":"11425"}],
+                "cq01-2011q4-setest3-12.vm.baidu.com" : [{"partition":"wp_1", "state":"RUNNING", "service_port":"11425"}, {"partition":"dnews_5", "state":"RUNNING", "service_port":"11441"}]
+        }
+}
+EOF
+
+cat $TMP | ./zkctl -s connection generate 2>&1
+rm $TMP

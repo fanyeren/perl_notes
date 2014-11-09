@@ -1,0 +1,29 @@
+#!/bin/bash
+source $(dirname $0)/common
+ 
+NODE=hankjin.vicp.net
+
+function hjz_reset()
+{
+    node_clear service-instance
+    node_clear service
+    node_clear slavenode
+}
+
+hjz_reset
+
+./zkctl -s slavenode add --slavenode-id=$NODE --data='{}'
+./zkctl -s service add --service-id=hjz --data='{}'
+
+#instance 1
+SID=$(./zkctl -s service-instance add --service-id=hjz --slavenode-id=$NODE --data='{}')
+./zkctl -s service-instance get-planned-state-all --service-instance-id=$SID
+
+#set default-planned-state
+./zkctl -s service set-default-planned-state-all --service-id=hjz --data='{"name":"hank"}'
+
+#instance 2
+SID=$(./zkctl -s service-instance add --service-id=hjz --slavenode-id=$NODE --data='{}')
+./zkctl -s service-instance get-planned-state-all --service-instance-id=$SID
+
+hjz_reset

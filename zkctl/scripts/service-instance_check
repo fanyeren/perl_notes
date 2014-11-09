@@ -1,0 +1,132 @@
+#! /bin/bash
+
+PROGNAME=${0##*/} 
+
+function usage() 
+{ 
+cat <<EOF 
+Check if current-state matching planned-state or not.
+
+Usage: ${PROGNAME} -f|--checking-field=FIELD [-i|--service-instance-id=SERVICE_INSTANCE_ID] [-v|--verbose]
+       ${PROGNAME} -h|--help
+
+Options: 
+EOF
+cat <<EOF | column -s\& -t 
+    -i|--service-instance-id & service-instance-id. Will read service-instance-id list from stdin if this option is not specified
+    -f|--checking-field & name of field to check. supported fields:
+    & [online_index | future_index | binary | dyndata.* | up_down_state]
+    -v|--verbose & show verbose messages
+    -h|--help & show this help 
+EOF
+echo
+} 
+
+
+## parse arguments and options
+SHORTOPTS="i:f:vh"
+LONGOPTS="service-instance-id:,checking-field:,verbose,help"
+
+TEMP=`getopt --options ${SHORTOPTS} --longoptions ${LONGOPTS} --name ${PROGNAME} -- "$@"`
+[ $? -ne 0 ] &&	usage && exit 1
+
+eval set -- "$TEMP"
+VERBOSE=0
+while true ; do
+	case "$1" in
+		-s|--service-instance-id) SERVICE_INSTANCE_ID="$2"; shift 2;;
+		-f|--checking-field) CHECKING_FIELD="$2"; shift 2;;
+		-v|--verbose) VERBOSE=1; shift 1;;
+		-h|--help) usage; exit 0;;
+		--) shift ; break ;;
+		*) usage; exit 1 ;;
+	esac
+done
+
+if [ "x${SERVICE_INSTANCE_ID}" != "x" ]; then
+	SERVICE_INSTANCE_LIST=${SERVICE_INSTANCE_ID}
+else
+	SERVICE_INSTANCE_LIST=`cat`
+fi
+
+
+
+## start working
+source "public.inc"
+function get_service_instance_state()
+{
+	SERVICE_INSTANCE_ID=$1
+	STATE=$2
+	KEY=$3
+	${ZKCTL_BIN} service-instance get-${STATE}-attr --service-instance-id=${SERVICE_INSTANCE_ID} --key=${KEY}
+	return $?
+}
+
+function assert_equal()
+{
+	SERVICE_INSTANCE_ID=$1
+	LEFT_STATE=$2
+	LEFT_KEY=$3
+	RIGHT_STATE=$4
+	RIGHT_KEY=$5
+	VERBOSE=$6
+	LEFT_VALUE=$(get_service_instance_state ${SERVICE_INSTANCE_ID} ${LEFT_STATE} ${LEFT_KEY})
+	RIGHT_VALUE=$(get_service_instance_state ${SERVICE_INSTANCE_ID} ${RIGHT_STATE} ${RIGHT_KEY})
+	if [ "x${LEFT_VALUE}" != "x${RIGHT_VALUE}" ]; then
+		if [ ${VERBOSE} -eq 1 ]; then
+			echo -e "${SERVICE_INSTANCE_ID} \t\t\033[31m[FAIL]\033[0m \"${LEFT_VALUE}\"!=\"${RIGHT_VALUE}\""
+		fi
+		return 1
+	else
+		if [ ${VERBOSE} -eq 1 ]; then
+			echo -e "${SERVICE_INSTANCE_ID} \t\t\033[32m[OK]\033[0m"
+		fi
+		return 1
+	fi
+}
+
+
+RET_CODE=0
+for ID in ${SERVICE_INSTANCE_LIST}; do
+	case "${CHECKING_FIELD}" in
+		online_index)
+			assert_equal ${ID} planned-state online_index_version \
+					   current-state online_index_version ${VERBOSE}
+			[ $? -ne 0 ] && RET_CODE=1
+			assert_equal ${ID} planned-state online_timestamp \
+					   current-state online_timestamp ${VERBOSE}
+			[ $? -ne 0 ] && RET_CODE=1
+			;;
+		future_index)
+			assert_equal ${ID} planned-state future_index_version \
+					   current-state future_index_version ${VERBOSE}
+			[ $? -ne 0 ] && RET_CODE=1
+			assert_equal ${ID} planned-state future_timestamp \
+					   current-state future_timestamp ${VERBOSE}
+			[ $? -ne 0 ] && RET_CODE=1
+			;;
+		binary)
+			INDEX_VERSION=$(get_service_instance_state ${ID} planned-state online_index_version)
+			[ $? -ne 0 ] && "echo get index_version failed. ${ID}" && exit 1
+			assert_equal ${ID} planned-state version.${INDEX_VERSION}.service_version \
+					   current-state service_version ${VERBOSE}
+			[ $? -ne 0 ] && RET_CODE=1
+			;;
+		dyndata.*)
+			assert_equal ${ID} planned-state ${CHECKING_FIELD}.timestamp \
+					   current-state ${CHECKING_FIELD}.timestamp ${VERBOSE}
+			[ $? -ne 0 ] && RET_CODE=1
+			;;
+		up_down_state)
+			assert_equal ${ID} planned-state up_down_state \
+					   current-state up_down_state ${VERBOSE}
+			[ $? -ne 0 ] && RET_CODE=1
+			;;
+		*) usage; exit 1 ;;
+	esac
+done
+
+exit ${RET_CODE}
+
+
+

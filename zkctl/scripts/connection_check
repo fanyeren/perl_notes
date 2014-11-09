@@ -1,0 +1,51 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#check if a partition is new add layer
+#Usage
+# ./zkctl connection check <group_id> <partition_id>
+# eg: ./zkctl connection check group_1 wdnb_2
+
+import json
+import sys
+import os
+import imp
+from StringIO import StringIO
+from connection import *
+
+if __name__=='__main__':
+    if len(sys.argv)<3:
+        oops('Usage: %s <group_id> <partition_id>')
+    group=sys.argv[1]
+    partition=sys.argv[2]
+    arbitrator=get_conf_arbitrator()
+    #TODO: idc 
+    if os.path.exists(arbitrator):
+        result=os.popen('%s -m dump -t connection -q bc/%s/jx' % (arbitrator, group)).readlines()
+    else:
+        sys.stderr.write('%s not exists, treat %s as old layer\n' % (arbitrator,partition))
+        print 'old'
+        sys.exit(0)
+
+    #new group
+    if len(result)==0:
+        print 'new'
+        sys.exit(0)
+
+    json_str=None
+    for line in result:
+        if line.startswith('DATA:'):
+            json_str=line[5:]
+    if json_str==None:
+        sys.stderr.write('arbitrator "%s" get "%s" execute failed,ret="%s"\n' % (arbitrator, group, result))
+        print 'old'
+        sys.exit(0)
+    try:
+        json_obj=json.read(json_str)
+    except Exception,e:
+        oops('invalid connection json "%s" of group "%s"' % (json_str, group))
+    indexes=[layer["index_name"] for layer in json_obj["bsinfo"]]
+    if partition in indexes: #layer already exist in connection
+        print 'old'
+    else:#new added layer
+        print 'new'
+

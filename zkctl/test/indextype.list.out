@@ -1,0 +1,10 @@
+add index-type result=0
+dnews
+se
+vip
+wp
+list index-type result=0
+del index-type result=0
+dnews
+se
+vip

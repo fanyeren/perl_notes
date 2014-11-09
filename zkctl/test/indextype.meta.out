@@ -1,0 +1,38 @@
+{"category":"manual","deployment_next_partition":"1","deployment_policy":"full","layer":"layer1","partition_count":"20","replication_factor":"2","resource_requirement":"io-bound","trans_db_priority":"2"}
+{}
+Add meta category=manual result 0
+manual
+Get meta category=manual result 0
+Add meta deployment_next_partition=1 result 0
+1
+Get meta deployment_next_partition=1 result 0
+Add meta deployment_policy=full result 0
+full
+Get meta deployment_policy=full result 0
+Add meta layer=layer1 result 0
+layer1
+Get meta layer=layer1 result 0
+Add meta partition_count=20 result 0
+20
+Get meta partition_count=20 result 0
+Add meta replication_factor=2 result 0
+2
+Get meta replication_factor=2 result 0
+Add meta resource_requirement=io-bound result 0
+io-bound
+Get meta resource_requirement=io-bound result 0
+Add meta trans_db_priority=2 result 0
+2
+Get meta trans_db_priority=2 result 0
+{"category":"manual","deployment_next_partition":"1","deployment_policy":"full","layer":"layer1","partition_count":"20","replication_factor":"2","resource_requirement":"io-bound","trans_db_priority":"2"}
+got all index-type result result=0
+del meta attr category result=0
+del meta attr deployment_next_partition result=0
+del meta attr deployment_policy result=0
+del meta attr layer result=0
+del meta attr partition_count result=0
+del meta attr replication_factor result=0
+del meta attr resource_requirement result=0
+del meta attr trans_db_priority result=0
+{}
+got empty index-type result result=0

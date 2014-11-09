@@ -1,0 +1,17 @@
+{"dyndata":{"brief":{"location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/dbtest\/dict\/dict2\/dict_old\/wp_0\/brief\/.list","prework":"bs_check_urllist","relativepath":"db\/gi\/data\/info","reloadcmd":"-t authority -o 60","timestamp":"201112142020"},"mask_url":{"location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/dbtest\/dict\/dict2\/dict_old\/wp_0\/mask_url\/.list","prework":"bs_check_urllist","relativepath":"db\/gi\/data\/info","reloadcmd":"-t mask -o 60","timestamp":"201112142020"},"zhannei":{"location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/dict\/wp_0\/zhannei\/.list","prework":"","relativepath":"conf\/bsdict","reloadcmd":"-t zhannei:mof","timestamp":"201112141818"}},"future_index_version":"V6","future_location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/dbtest\/db\/wp\/wp_15","future_timestamp":"201112142020","online_index_version":"V6","online_location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/dbtest\/db\/wp\/wp_15","online_timestamp":"201112142020","up_down_state":"up","version":{"V6":{"service_location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/deploy\/dnews\/service_1_2","service_version":"service_1_2_dnewb"}}}
+Add state dyndata.brief.mydict result 0
+{"hank":"hjz"}
+Get state dyndata.brief.mydict result 0
+service bs_dnews_3 add-default-planned-state-attr failed, this key field may be exist already
+Add added state dyndata.brief.mydict, should failed, result 1
+Set state dyndata.brief.mydict result 0
+somebody
+Get state dyndata.brief.mydict result 0
+Del state dyndata.brief.mydict result 0
+service bs_dnews_3 del-default-planned-state-attr failed, this key may not be exist
+Del deleted state dyndata.brief.mydict, should failed, result 1
+{"dyndata":{"brief":{"location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/dbtest\/dict\/dict2\/dict_old\/wp_0\/brief\/.list","prework":"bs_check_urllist","relativepath":"db\/gi\/data\/info","reloadcmd":"-t authority -o 60","timestamp":"201112142020"},"mask_url":{"location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/dbtest\/dict\/dict2\/dict_old\/wp_0\/mask_url\/.list","prework":"bs_check_urllist","relativepath":"db\/gi\/data\/info","reloadcmd":"-t mask -o 60","timestamp":"201112142020"},"zhannei":{"location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/dict\/wp_0\/zhannei\/.list","prework":"","relativepath":"conf\/bsdict","reloadcmd":"-t zhannei:mof","timestamp":"201112141818"}},"future_index_version":"V6","future_location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/dbtest\/db\/wp\/wp_15","future_timestamp":"201112142020","online_index_version":"V6","online_location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/dbtest\/db\/wp\/wp_15","online_timestamp":"201112142020","up_down_state":"up","version":{"V6":{"service_location":"hdfs:\/\/rd3:rd3@szjjh-blmon4.szjjh01:54310\/user\/rd3\/along\/deploy\/dnews\/service_1_2","service_version":"service_1_2_dnewb"}}}
+got all state service result result=0
+set empty state result=0
+{}
+got empty service result result=0

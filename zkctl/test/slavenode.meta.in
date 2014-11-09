@@ -1,0 +1,30 @@
+#!/bin/bash
+source $(dirname $0)/common
+
+NODEID="hjz"
+node_clear slavenode
+./zkctl -w slavenode add --slavenode-id=$NODEID --data={}
+
+raw='"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"/home","failure_domain":"default","flash_capacity":"640G","flash_path":"/ssd1","group":"group_1","idc":"tc","online_state":"online","safe-mode":"off","work_path":"/home/work/search"'
+
+for item in `echo $raw|tr -s "," " "`; do
+    rawkv=`echo $item|tr -d \" | tr -s ":" " "`
+    kv=($rawkv)
+    ./zkctl -w slavenode add-meta-attr --slavenode-id=$NODEID --key=${kv[0]} --value=${kv[1]}
+    echo "Add meta ${kv[0]}=${kv[1]} result $?"
+    ./zkctl -s slavenode get-meta-attr --slavenode-id=$NODEID --key=${kv[0]}
+    echo "Get meta ${kv[0]}=${kv[1]} result $?"
+done
+
+./zkctl -s slavenode get-meta-all --slavenode-id=$NODEID
+echo "got all cluster result result=$?"
+
+for item in `echo $raw|tr -s "," " "`; do
+    rawkv=`echo $item|tr -d \" | tr -s ":" " "`
+    kv=($rawkv)
+    ./zkctl -w slavenode del-meta-attr --slavenode-id=$NODEID --key=${kv[0]}
+    echo "del meta attr ${kv[0]} result=$?"
+done
+
+./zkctl -s slavenode get-meta-all --slavenode-id=$NODEID
+echo "got empty cluster result result=$?"

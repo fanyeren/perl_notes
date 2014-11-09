@@ -1,0 +1,144 @@
+{
+    "age":"12",
+    "inst":[
+        "1",
+        "2",
+        "3"
+    ],
+    "name":"hjz",
+    "version":{
+        "v1":"2"
+    }
+}
+get cluster meta all result=0
+{
+    "age":"12",
+    "inst":[
+        "1",
+        "2",
+        "3"
+    ],
+    "name":"hjz",
+    "version":{
+        "v1":"2"
+    }
+}
+Getting idc jx meta pretty result=0
+{
+    "age":"12",
+    "inst":[
+        "1",
+        "2",
+        "3"
+    ],
+    "name":"hjz",
+    "version":{
+        "v1":"2"
+    }
+}
+Getting group group_0 meta pretty result=0
+{
+    "age":"12",
+    "inst":[
+        "1",
+        "2",
+        "3"
+    ],
+    "name":"hjz",
+    "version":{
+        "v1":"2"
+    }
+}
+Getting index-type wdnb meta pretty result=0
+{
+    "age":"12",
+    "inst":[
+        "1",
+        "2",
+        "3"
+    ],
+    "name":"hjz",
+    "version":{
+        "v1":"2"
+    }
+}
+Getting index-partition wdnb_9 meta pretty result=0
+{
+    "age":"12",
+    "inst":[
+        "1",
+        "2",
+        "3"
+    ],
+    "name":"hjz",
+    "version":{
+        "v1":"2"
+    }
+}
+get slavenode meta result=0
+{
+    "age":"12",
+    "inst":[
+        "1",
+        "2",
+        "3"
+    ],
+    "name":"hjz",
+    "version":{
+        "v1":"2"
+    }
+}
+get service meta result=0
+{
+    "age":"12",
+    "inst":[
+        "1",
+        "2",
+        "3"
+    ],
+    "name":"hjz",
+    "slavenode_id":"hjz",
+    "version":{
+        "v1":"2"
+    }
+}
+get service instance meta result=0
+{
+    "age":"12",
+    "inst":[
+        "1",
+        "2",
+        "3"
+    ],
+    "name":"hjz",
+    "version":{
+        "v1":"2"
+    }
+}
+get service state result=0
+{
+    "age":"12",
+    "inst":[
+        "1",
+        "2",
+        "3"
+    ],
+    "name":"hjz",
+    "version":{
+        "v1":"2"
+    }
+}
+get service isntance state result=0
+{
+    "age":"12",
+    "inst":[
+        "1",
+        "2",
+        "3"
+    ],
+    "name":"hjz",
+    "version":{
+        "v1":"2"
+    }
+}
+get service instance current state result=0

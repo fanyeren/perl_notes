@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#commit a bc-bs connection json to zk
+#Usage
+# 1. ./zkctl placement-plan dump > dump.hjz
+# 2. ./zkctl connection refresh < dump.hjz > bcbs.json
+# 3. YIIC applyconnection applyall --file=bcbs.json
+# YIIC="/home/work/zooman/bin/protected/yiic"
+import sys
+import os
+from connection import *
+
+if __name__=='__main__':
+    #check command line
+    if len(sys.argv)<2: 
+        oops("Usage %s json_file" % sys.argv[0])
+    #check json file path
+    conf_file=sys.argv[1]
+    if not conf_file.startswith('/'):
+        conf_file='../%s' % (conf_file)
+    #get yiic path
+    yiic=get_conf_yiic()
+    if not os.path.exists(yiic):
+        sys.stderr.write('%s not exists\n' % yiic)
+    else:
+        cmd='%s applyconnection applyall --file=%s' % (yiic, conf_file)
+        ret=os.system(cmd)
+        if 0==ret:
+            sys.exit(0)
+        else:
+            sys.stderr.write('"%s" execute failed, ret=%s\n' % (yiic, ret))
+            sys.exit(1)

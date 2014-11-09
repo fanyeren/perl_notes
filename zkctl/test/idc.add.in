@@ -1,0 +1,8 @@
+#!/bin/bash
+source $(dirname $0)/common
+
+node_clear idc
+
+./zkctl -w idc add --idc-id=jx --data='{"auto_start_new_service":"off","safe_mode":"off"}'
+echo "add result $?"
+./zkctl -w idc get-meta-all --idc-id=jx

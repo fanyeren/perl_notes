@@ -1,0 +1,73 @@
+#! /bin/bash
+
+PROGNAME=${0##*/} 
+
+function usage() 
+{ 
+cat <<EOF 
+Check for blacklist of service instances. 
+
+Usage: ${PROGNAME} [-i|--service-instance-id=SERVICE_INSTANCE_ID] [-v|--verbose]
+       ${PROGNAME} -h|--help
+
+Options: 
+EOF
+cat <<EOF | column -s\& -t 
+    -i|--service-instance-id & service-instance-id. Will read service-instance-id list from stdin if this option is not specified
+    -v|--verbose & show verbose messages
+    -h|--help & show this help 
+EOF
+echo
+} 
+
+
+
+## parse arguments and options
+SHORTOPTS="i:f:vh"
+LONGOPTS="service-instance-id:,checking-field:,verbose,help"
+
+TEMP=`getopt --options ${SHORTOPTS} --longoptions ${LONGOPTS} --name ${PROGNAME} -- "$@"`
+[ $? -ne 0 ] &&	usage && exit 1
+
+eval set -- "$TEMP"
+VERBOSE=0
+while true ; do
+	case "$1" in
+		-s|--service-instance-id) SERVICE_INSTANCE_ID="$2"; shift 2;;
+		-v|--verbose) VERBOSE=1; shift 1;;
+		-h|--help) usage; exit 0;;
+		--) shift ; break ;;
+		*) usage; exit 1 ;;
+	esac
+done
+
+if [ "x${SERVICE_INSTANCE_ID}" != "x" ]; then
+	SERVICE_INSTANCE_LIST=${SERVICE_INSTANCE_ID}
+else
+	SERVICE_INSTANCE_LIST=`cat`
+fi
+
+
+# start working
+source "public.inc"
+SSH_BIN="ssh -o StrictHostKeyChecking=no"
+RET_CODE=0
+
+for INSTANCE in ${SERVICE_INSTANCE_LIST}; do
+	HAVE_BLACKLIST=$(${ZKCTL_BIN} service-instance get-current-state-attr --service-instance-id=${INSTANCE} --key=have_blacklist)
+	[ $? -ne 0 ] && echo "${INSTANCE} not exist." && RET_CODE=1 && continue
+
+	if [ "x${HAVE_BLACKLIST}" == "x1" ]; then
+		if [ ${VERBOSE} -eq 1 ]; then
+			NODE=$(${ZKCTL_BIN} service-instance get-meta-attr --service-instance-id=${INSTANCE} --key=slavenode_id)
+			[ $? -ne 0 ] && echo "${NODE} ${INSTANCE} not exist." && RET_CODE=1 && continue
+			echo ${INSTANCE} ${NODE} $(${SSH_BIN} ${NODE} ls /home/work/urlagent/data/ | grep "^${INSTANCE}" | xargs)
+			[ $? -ne 0 ] && echo "${NODE} ${INSTANCE} get blacklist failed." && RET_CODE=1 && continue
+		else
+			echo ${INSTANCE}
+		fi
+		RET_CODE=1
+	fi
+done
+
+exit ${RET_CODE}

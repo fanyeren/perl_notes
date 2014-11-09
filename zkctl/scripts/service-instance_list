@@ -1,0 +1,64 @@
+#! /bin/bash
+
+TEMP=`getopt -o s:vh --long slavenode:,verbose,help -n 'list_service_instance.sh' -- "$@"`
+
+if [ $? != 0 ] ; then
+        echo "Terminating..." >&2
+        exit 1
+fi
+
+eval set -- "$TEMP"
+
+VERBOSE=0
+HELP=0
+
+while true ; do
+        case "$1" in
+				-s|--slavenode) SLAVENODE=$2; shift 2;;
+                -v|--verbose) VERBOSE=1; shift;;
+				-h|--help) HELP=1; shift;;
+                --) shift ; break ;;
+                *) echo "Internal error!" ; exit 1 ;;
+        esac
+done
+
+source "public.inc"
+
+function get_instance_list()
+{
+	if [ "x${SLAVENODE}" != "x" ]; then
+		SERVICE_INSTANCE_LIST=$(${ZKCTL_BIN} slavenode list-service-instance --slavenode-id=${SLAVENODE})
+		[ $? -ne 0 ] && echo "${SLAVENODE} list service instance failed."
+	else
+		SERVICE_LIST=$(${ZKCTL_BIN} service list)
+		[ $? -ne 0 ] && echo "list service failed." && return 1
+		SERVICE_INSTANCE_LIST=""
+		for SERVICE in ${SERVICE_LIST}; do 
+			SERVICE_INSTANCE_LIST="${SERVICE_INSTANCE_LIST} $(${ZKCTL_BIN} service list-service-instance --service-id=${SERVICE})"
+		done
+	fi
+	if [ "x$1" != "x" ]; then
+		echo ${SERVICE_INSTANCE_LIST} | xargs -n 1 | grep $1
+	else
+		echo ${SERVICE_INSTANCE_LIST}
+	fi
+}
+
+INSTANCE_LIST=`get_instance_list $1`
+for instance in $INSTANCE_LIST; do
+	echo -n $instance
+	if [ $VERBOSE -eq 1 ]; then
+		echo -ne "\t`${ZKCTL_BIN} service-instance get-meta-attr --service-instance-id=$instance --key=slavenode_id`"
+		echo -ne "\t`${ZKCTL_BIN} service-instance get-meta-attr --service-instance-id=$instance --key=state`"
+		echo -ne "\t`${ZKCTL_BIN} service-instance get-current-state-attr --service-instance-id=$instance --key=up_down_state`"
+		echo -ne "\tbs_`${ZKCTL_BIN} service-instance get-current-state-attr --service-instance-id=$instance --key=slot_id`"
+		echo -ne "\tdata_`${ZKCTL_BIN} service-instance get-current-state-attr --service-instance-id=$instance --key=online_data_id`"
+		echo -ne "\tblacklist:`${ZKCTL_BIN} service-instance get-current-state-attr --service-instance-id=$instance --key=have_blacklist`"
+		echo -ne "\t`${ZKCTL_BIN} service-instance get-current-state-attr --service-instance-id=$instance --key=online_index_version`"
+		echo -ne "\t`${ZKCTL_BIN} service-instance get-current-state-attr --service-instance-id=$instance --key=online_timestamp`"
+		echo -ne "\t`${ZKCTL_BIN} service-instance get-current-state-attr --service-instance-id=$instance --key=service_version`"
+		echo -ne "\t`${ZKCTL_BIN} service-instance get-current-state-attr --service-instance-id=$instance --key=transdb_task_name`"
+	fi
+	echo 
+done
+

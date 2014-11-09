@@ -1,0 +1,10 @@
+#!/bin/bash
+function node_clear()
+{
+    local _TYPE
+    _TYPE=$1
+    ./zkctl -s $_TYPE list | while read _item;
+    do
+        ./zkctl -s $_TYPE del --$_TYPE-id=$_item
+    done
+}

@@ -1,0 +1,34 @@
+{"group":"group_1","index_layer":"layer1","index_type":"dnews","replication_factor":"1"}
+{}
+Add meta group=group_1 result 0
+group_1
+Get meta group=group_1 result 0
+Set meta group=group_1 result 0
+hjz
+Get meta group=group_1 result 0
+Add meta index_layer=layer1 result 0
+layer1
+Get meta index_layer=layer1 result 0
+Set meta index_layer=layer1 result 0
+hjz
+Get meta index_layer=layer1 result 0
+Add meta index_type=dnews result 0
+dnews
+Get meta index_type=dnews result 0
+Set meta index_type=dnews result 0
+hjz
+Get meta index_type=dnews result 0
+Add meta replication_factor=1 result 0
+1
+Get meta replication_factor=1 result 0
+Set meta replication_factor=1 result 0
+hjz
+Get meta replication_factor=1 result 0
+{"group":"hjz","index_layer":"hjz","index_type":"hjz","replication_factor":"hjz"}
+got all index-partition result result=0
+del meta attr group result=0
+del meta attr index_layer result=0
+del meta attr index_type result=0
+del meta attr replication_factor result=0
+{}
+got empty index-partition result result=0

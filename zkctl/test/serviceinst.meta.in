@@ -1,0 +1,66 @@
+#!/bin/bash
+source $(dirname $0)/common
+TYPE=service-instance
+VALUE=bs_dnews_2
+NODE=hankjin.vicp.net
+
+raw='"category":"auto","service_id":"bs_dnews_0","slavenode_id":"cq01-2011q4-setest3-11.vm.baidu.com","state":"NEW","trans_db_priority":"1","up_down_state":"down"'
+
+function reset()
+{
+    ./zkctl -s service-instance list | while read si; do
+        ./zkctl -s service-instance del-meta-attr --service-instance-id=$si --key=slavenode_id
+    done
+}
+#准备环境
+node_clear $TYPE
+node_clear service
+node_clear slavenode
+./zkctl -s slavenode add --slavenode-id=$NODE --data={}
+./zkctl -w service add --service-id=$VALUE --data={}
+echo "add service result=$?"
+
+#set meta all
+ID=$(./zkctl -w $TYPE add --service-id=$VALUE --slavenode-id=$NODE --data='{'$raw'}')
+echo "add service instance result=$?"
+./zkctl -s $TYPE get-meta-all --$TYPE-id=$ID
+echo "get meta all result=$?"
+./zkctl -s slavenode list-service-instance --slavenode-id=$NODE
+echo "get service instance result=$?"
+./zkctl -w $TYPE del --$TYPE-id=$ID 2>&1
+echo "del service instance result=$?"
+
+#set null meta
+ID=$(./zkctl -w $TYPE add --service-id=$VALUE --slavenode-id=$NODE --data={})
+./zkctl -s $TYPE get-meta-all --$TYPE-id=$ID
+
+for item in `echo $raw|tr -s "," " "`; do
+    rawkv=`echo $item|tr -d \" | tr -s ":" " "`
+    kv=($rawkv)
+    ./zkctl -w $TYPE add-meta-attr --$TYPE-id=$ID --key=${kv[0]} --value=${kv[1]} 2>&1
+    echo "Add meta ${kv[0]}=${kv[1]} result $?"
+    ./zkctl -s $TYPE get-meta-attr --$TYPE-id=$ID --key=${kv[0]}
+    echo "Get meta ${kv[0]}=${kv[1]} result $?"
+    ./zkctl -w $TYPE set-meta-attr --$TYPE-id=$ID --key=${kv[0]} --value='hjz'
+    echo "Set meta ${kv[0]}=${kv[1]} result $?"
+    ./zkctl -s $TYPE get-meta-attr --$TYPE-id=$ID --key=${kv[0]}
+    echo "Get meta ${kv[0]}=${kv[1]} result $?"
+done
+
+./zkctl -s $TYPE get-meta-all --$TYPE-id=$ID
+echo "got meta all $TYPE result result=$?"
+
+for item in `echo $raw|tr -s "," " "`; do
+    rawkv=`echo $item|tr -d \" | tr -s ":" " "`
+    kv=($rawkv)
+    ./zkctl -w $TYPE del-meta-attr --$TYPE-id=$ID --key=${kv[0]}
+    echo "del meta attr ${kv[0]} result=$?"
+done
+
+./zkctl -s $TYPE get-meta-all --$TYPE-id=$ID
+echo "got empty $TYPE result result=$?"
+./zkctl -w $TYPE add-meta-attr --$TYPE-id=$ID --key=slavenode_id --value=$NODE
+
+node_clear $TYPE
+node_clear service
+node_clear slavenode

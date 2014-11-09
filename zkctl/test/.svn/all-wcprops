@@ -1,0 +1,335 @@
+K 25
+svn:wc:ra_dav:version-url
+V 43
+/ps/se/!svn/ver/198039/trunk/aop/zkctl/test
+END
+service.list.out
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/ps/se/!svn/ver/179942/trunk/aop/zkctl/test/service.list.out
+END
+command.out
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/ps/se/!svn/ver/183727/trunk/aop/zkctl/test/command.out
+END
+idc.meta.out
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/ps/se/!svn/ver/179942/trunk/aop/zkctl/test/idc.meta.out
+END
+idc.add.in
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/ps/se/!svn/ver/182573/trunk/aop/zkctl/test/idc.add.in
+END
+help.out
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/ps/se/!svn/ver/193040/trunk/aop/zkctl/test/help.out
+END
+commit.out
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/ps/se/!svn/ver/194183/trunk/aop/zkctl/test/commit.out
+END
+slavenode.list.out
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/ps/se/!svn/ver/183727/trunk/aop/zkctl/test/slavenode.list.out
+END
+group.in
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/ps/se/!svn/ver/182573/trunk/aop/zkctl/test/group.in
+END
+indextype.meta.out
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/ps/se/!svn/ver/179942/trunk/aop/zkctl/test/indextype.meta.out
+END
+dyndata.list.out
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/ps/se/!svn/ver/187903/trunk/aop/zkctl/test/dyndata.list.out
+END
+cluster.semaphore.in
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/ps/se/!svn/ver/182573/trunk/aop/zkctl/test/cluster.semaphore.in
+END
+idc.del.out
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/ps/se/!svn/ver/179942/trunk/aop/zkctl/test/idc.del.out
+END
+cluster.semaphore.out
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/ps/se/!svn/ver/179942/trunk/aop/zkctl/test/cluster.semaphore.out
+END
+cluster.meta.out
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/ps/se/!svn/ver/179942/trunk/aop/zkctl/test/cluster.meta.out
+END
+indexpart.list.in
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/ps/se/!svn/ver/183121/trunk/aop/zkctl/test/indexpart.list.in
+END
+serviceinst.list.in
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/ps/se/!svn/ver/182573/trunk/aop/zkctl/test/serviceinst.list.in
+END
+idc.list.in
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/ps/se/!svn/ver/182573/trunk/aop/zkctl/test/idc.list.in
+END
+service.list.in
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/ps/se/!svn/ver/183121/trunk/aop/zkctl/test/service.list.in
+END
+idc.list.out
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/ps/se/!svn/ver/179942/trunk/aop/zkctl/test/idc.list.out
+END
+serviceinst.state.in
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/ps/se/!svn/ver/183652/trunk/aop/zkctl/test/serviceinst.state.in
+END
+serviceinst.state.out
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/ps/se/!svn/ver/183652/trunk/aop/zkctl/test/serviceinst.state.out
+END
+command.in
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/ps/se/!svn/ver/187903/trunk/aop/zkctl/test/command.in
+END
+service.state.in
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/ps/se/!svn/ver/182573/trunk/aop/zkctl/test/service.state.in
+END
+service.state.out
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/ps/se/!svn/ver/183652/trunk/aop/zkctl/test/service.state.out
+END
+common
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/ps/se/!svn/ver/179942/trunk/aop/zkctl/test/common
+END
+serviceinst.meta.in
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/ps/se/!svn/ver/182573/trunk/aop/zkctl/test/serviceinst.meta.in
+END
+indexpart.meta.in
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/ps/se/!svn/ver/182573/trunk/aop/zkctl/test/indexpart.meta.in
+END
+indextype.list.in
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/ps/se/!svn/ver/183652/trunk/aop/zkctl/test/indextype.list.in
+END
+serviceinst.meta.out
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/ps/se/!svn/ver/183652/trunk/aop/zkctl/test/serviceinst.meta.out
+END
+indextype.list.out
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/ps/se/!svn/ver/183652/trunk/aop/zkctl/test/indextype.list.out
+END
+indexpart.meta.out
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/ps/se/!svn/ver/179942/trunk/aop/zkctl/test/indexpart.meta.out
+END
+idc.meta.in
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/ps/se/!svn/ver/182573/trunk/aop/zkctl/test/idc.meta.in
+END
+serviceinst.add.in
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/ps/se/!svn/ver/198039/trunk/aop/zkctl/test/serviceinst.add.in
+END
+service.meta.in
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/ps/se/!svn/ver/182573/trunk/aop/zkctl/test/service.meta.in
+END
+serviceinst.add.out
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/ps/se/!svn/ver/198039/trunk/aop/zkctl/test/serviceinst.add.out
+END
+service.meta.out
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/ps/se/!svn/ver/180832/trunk/aop/zkctl/test/service.meta.out
+END
+idc.add.out
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/ps/se/!svn/ver/179942/trunk/aop/zkctl/test/idc.add.out
+END
+pretty.in
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/ps/se/!svn/ver/187714/trunk/aop/zkctl/test/pretty.in
+END
+help.in
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/ps/se/!svn/ver/182573/trunk/aop/zkctl/test/help.in
+END
+commit.in
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/ps/se/!svn/ver/194183/trunk/aop/zkctl/test/commit.in
+END
+pretty.out
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/ps/se/!svn/ver/184136/trunk/aop/zkctl/test/pretty.out
+END
+slavenode.list.in
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/ps/se/!svn/ver/183126/trunk/aop/zkctl/test/slavenode.list.in
+END
+group.out
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/ps/se/!svn/ver/179942/trunk/aop/zkctl/test/group.out
+END
+indextype.meta.in
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/ps/se/!svn/ver/182573/trunk/aop/zkctl/test/indextype.meta.in
+END
+dyndata.list.in
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/ps/se/!svn/ver/187903/trunk/aop/zkctl/test/dyndata.list.in
+END
+connection.in
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/ps/se/!svn/ver/196693/trunk/aop/zkctl/test/connection.in
+END
+connection.out
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/ps/se/!svn/ver/196693/trunk/aop/zkctl/test/connection.out
+END
+idc.del.in
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/ps/se/!svn/ver/182573/trunk/aop/zkctl/test/idc.del.in
+END
+slavenode.meta.in
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/ps/se/!svn/ver/182573/trunk/aop/zkctl/test/slavenode.meta.in
+END
+dump.in
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/ps/se/!svn/ver/194183/trunk/aop/zkctl/test/dump.in
+END
+cluster.meta.in
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/ps/se/!svn/ver/182573/trunk/aop/zkctl/test/cluster.meta.in
+END
+dump.out
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/ps/se/!svn/ver/194183/trunk/aop/zkctl/test/dump.out
+END
+slavenode.meta.out
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/ps/se/!svn/ver/179942/trunk/aop/zkctl/test/slavenode.meta.out
+END
+indexpart.list.out
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/ps/se/!svn/ver/183652/trunk/aop/zkctl/test/indexpart.list.out
+END
+serviceinst.list.out
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/ps/se/!svn/ver/183727/trunk/aop/zkctl/test/serviceinst.list.out
+END

@@ -1,0 +1,58 @@
+#!/bin/bash
+source $(dirname $0)/common
+
+function clear_command()
+{
+    ./zkctl -s -s service-instance list | while read sid; do
+        ./zkctl -s -s command list --service-instance-id=$sid | while read cid; do
+            ./zkctl -s command del --service-instance-id=$sid --command-id=$cid
+        done
+    done
+}
+
+clear_command
+node_clear service-instance
+node_clear service
+node_clear slavenode
+
+./zkctl -s service add --service-id=hjz --data={}
+./zkctl -s slavenode add --slavenode-id=hank --data={}
+ID=$(./zkctl -s service-instance add --service-id=hjz --slavenode-id=hank --data={})
+echo "add service-instance $ID"
+./zkctl -s command list --service-instance-id=$ID && echo $?
+./zkctl -s command add --service-instance-id=$ID 2>&1
+echo "add command with no command-id shoudl fail, result=$?"
+./zkctl -s command list --service-instance-id=$ID
+echo "list command result=$?"
+./zkctl -s command add --service-instance-id=$ID --command-id=trandb --data={}
+echo "add command result=$?"
+./zkctl -s command list --service-instance-id=$ID
+echo "list command result=$?"
+./zkctl -s command del --service-instance-id=$ID --command-id=trandb
+echo "del command result=$?"
+./zkctl -s command list --service-instance-id=$ID 
+echo "list command result=$?"
+./zkctl -s command del --service-instance-id=$ID --command-id=trandb 2>&1
+echo "del deleted command should fail, result=$?"
+
+./zkctl -s command add --service-instance-id=$ID --command-id=trandb --data={} && echo $?
+./zkctl -s command get-meta-all --service-instance-id=$ID --command-id=trandb && echo $?
+./zkctl -s command set-meta-all --service-instance-id=$ID --command-id=trandb --data='{"name":"hank","age":88}' && echo $?
+./zkctl -s command get-meta-all --service-instance-id=$ID --command-id=trandb && echo $?
+./zkctl -s command set-meta-attr --service-instance-id=$ID --command-id=trandb --key=name --value=joke && echo $?
+./zkctl -s command get-meta-all --service-instance-id=$ID --command-id=trandb && echo $?
+./zkctl -s command add-meta-attr --service-instance-id=$ID --command-id=trandb --key=name --value=joke 2>&1
+echo "add exist attr should fail, result=$?"
+./zkctl -s command add-meta-attr --service-instance-id=$ID --command-id=trandb --key=class --value=12 && echo $?
+./zkctl -s command get-meta-all --service-instance-id=$ID --command-id=trandb && echo $?
+./zkctl -s command del-meta-attr --service-instance-id=$ID --command-id=trandb --key=notexit 2>&1 && echo $?
+echo "del not exit attr should fail, result=$?"
+./zkctl -s command get-meta-all --service-instance-id=$ID --command-id=trandb && echo $?
+./zkctl -s command del-meta-attr --service-instance-id=$ID --command-id=trandb --key=class && echo $?
+./zkctl -s command get-meta-all --service-instance-id=$ID --command-id=trandb && echo $?
+
+clear_command
+node_clear service-instance
+node_clear service
+node_clear slavenode
+

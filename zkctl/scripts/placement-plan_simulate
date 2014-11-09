@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import json
+import sys
+import os
+import imp
+import logging
+from StringIO import StringIO
+
+def normalize_path(path):
+    if path.startswith('/'):
+        return path
+    else:
+        return '../%s' % path
+if __name__=='__main__':
+    handle=imp.load_source('zk_plan', '.', open('placement-plan_generate'))
+    handle.LOG.setLevel(logging.ERROR)
+    #case collection, format: [input file, output file, diff file(optional)]
+    if len(sys.argv)<3:
+        sys.stderr.write('Usage: %s <dump_file> <generated_file>\n' % sys.argv[0])
+        sys.stderr.write(' eg: %s scripts/test/in.hjz scripts/test/out.hjz\n' % sys.argv[0])
+        sys.exit(1)
+    dump_file=normalize_path(sys.argv[1])
+    generated_file=normalize_path(sys.argv[2])
+    handle.simulate(dump_file, generated_file)
+

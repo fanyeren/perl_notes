@@ -1,0 +1,6 @@
+add result 0
+{"info":"hello worlp"}
+getmeta-all result=0
+hello worlp
+getmeta-attr result=0
+del group result=0

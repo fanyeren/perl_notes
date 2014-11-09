@@ -1,0 +1,183 @@
+#! /bin/bash
+
+PROGNAME=${0##*/} 
+
+function usage() 
+{ 
+cat <<EOF 
+push index to online
+
+Usage: ${PROGNAME} -a|--action=register -b|--build-name -t|--timestamp -p|--index-type -c|--total-partition -n|--partition-no -f|--hdfs-path -m|--urllist-md5sum -v|--index-version -s|--index-size -u|--url-num
+       ${PROGNAME} -a|--action=deploy|switch --i|--index-id
+       ${PROGNAME} -h|--help
+
+Options: 
+EOF
+cat <<EOF | column -s\& -t 
+	-a|--action & action (register, deploy, switch)
+	-b|--build-name & group id
+	-t|--timestamp & timestamp
+	-p|--index-type & index type
+	-c|--total-partition & total partition count
+	-n|--partition-no & partition no
+	-f|--hdfs-path & HDFS path
+	-m|--urllist-md5sum & md5sum of url.list
+	-v|--index-version & index version
+	-s|--index-size & index size (in GB)
+	-u|--url-num & url count
+	-i|--index-id & index id
+	-h|--help & show this help 
+EOF
+echo
+} 
+
+
+## parse arguments and options
+SHORTOPTS="a::b:t:p:c:n:f:m:v:s:u:i:h"
+LONGOPTS="action::,build-name:,timestamp:,index-type:,total-partition:,partition-no:,hdfs-path:,urllist-md5sum:,index-version:,index-size:,url-num:,index-id:,help"
+
+TEMP=`getopt --options ${SHORTOPTS} --longoptions ${LONGOPTS} --name ${PROGNAME} -- "$@"`
+[ $? -ne 0 ] && usage && exit 1
+
+eval set -- "$TEMP"
+while true ; do
+	case "$1" in
+		-a|--action) ACTION="$2"; shift 2;;
+		-b|--build-name) BUILD_NAME="$2"; shift 2;;
+		-t|--timestamp) TIMESTAMP="$2"; shift 2;;
+		-p|--index-type) INDEX_TYPE="$2"; shift 2;;
+		-c|--total-partition) TOTAL_PARTITION="$2"; shift 2;;
+		-n|--partition-no) PARTITION_NO="$2"; shift 2;;
+		-f|--hdfs-path) HDFS_PATH="$2"; shift 2;;
+		-m|--urllist-md5sum) URLLIST_MD5SUM="$2"; shift 2;;
+		-v|--index-version) INDEX_VERSION="$2"; shift 2;;
+		-s|--index-size) INDEX_SIZE="$2"; shift 2;;
+		-u|--url-num) URL_NUM="$2"; shift 2;;
+		-i|--index-id) INDEX_ID="$2"; shift 2;;
+		-h|--help) usage; exit 0;;
+		--) shift ; break ;;
+		*) usage; exit 1 ;;
+	esac
+done
+
+## start working
+source "public.inc"
+
+
+# register index info
+function register_index()
+{
+	DEPLOYMENT_POLICY=$(${ZKCTL_BIN} index-type get-meta-attr --index-type-id=${INDEX_TYPE} --key=deployment_policy)
+	[ $? -ne 0 ] && echo "${INDEX_TYPE} get meta attribute deployment_policy failed." && return 1
+	if [ "x${DEPLOYMENT_POLICY}" == "xincremental" ]; then
+		# get current partition counter 
+		ACTUAL_PARTITION_NO=$(${ZKCTL_BIN} index-type get-meta-attr --index-type-id=${INDEX_TYPE} --key=deployment_next_partition)
+		[ $? -ne 0 ] && echo "${INDEX_TYPE} get meta attribute deployment_next_partition failed." && return 1
+		PARTITION_ID="${INDEX_TYPE}_${ACTUAL_PARTITION_NO}"
+	elif [ "x${DEPLOYMENT_POLICY}" == "xfull" ]; then
+		PARTITION_ID="${INDEX_TYPE}_${PARTITION_NO}"
+	else
+		echo "invalid deployment policy: ${DEPLOYMENT_POLICY}"
+		exit 1
+	fi
+
+	# register index info
+	INDEX_ID="${PARTITION_ID}_${TIMESTAMP}"
+	INDEX_META=$(cat <<EOF
+{   
+	"hdfs_path": "${HDFS_PATH}",
+	"index_partition_id": "${PARTITION_ID}",
+	"size": "${INDEX_SIZE}",
+	"timestamp": "${TIMESTAMP}",
+	"version": "${INDEX_VERSION}"
+}
+EOF)
+	${ZKCTL_BIN} index add --index-id=${INDEX_ID} --data="${INDEX_META}"
+	[ $? -ne 0 ] && echo "${INDEX_ID} register index failed" && return 1
+	echo ${INDEX_ID}
+
+	# increase partition counter
+	if [ "x${DEPLOYMENT_POLICY}" == "xincremental" ]; then
+		TOTOAL_PARTITION_COUNT=$(${ZKCTL_BIN} index-type get-meta-attr --index-type-id=${INDEX_TYPE} --key=partition_count)
+		[ $? -ne 0 ] && echo "${INDEX_TYPE} get meta attribute partition_count failed." && return 1
+		NEXT_PARTITION_NO=$((ACTUAL_PARTITION_NO+1))
+		NEXT_PARTITION_NO=$((NEXT_PARTITION_NO%TOTOAL_PARTITION_COUNT))
+		${ZKCTL_BIN} index-type set-meta-attr --index-type-id=${INDEX_TYPE} --key=deployment_next_partition --value=${NEXT_PARTITION_NO}
+		[ $? -ne 0 ] && echo "${INDEX_TYPE} set meta attribute next partition failed." && return 1
+	fi
+
+	return 0
+}
+
+# push to future index. e.g.
+function deploy_index()
+{
+	INDEX_TIMESTAMP=$(${ZKCTL_BIN} index get-meta-attr --index-id=${INDEX_ID} --key=timestamp)
+	[ $? -ne 0 ] && echo "${INDEX_ID} get meta attribute timestamp failed." && return 1
+	INDEX_VERSION=$(${ZKCTL_BIN} index get-meta-attr --index-id=${INDEX_ID} --key=version)
+	[ $? -ne 0 ] && echo "${INDEX_ID} get meta attribute version failed." && return 1
+	INDEX_HDFS_PATH=$(${ZKCTL_BIN} index get-meta-attr --index-id=${INDEX_ID} --key=hdfs_path)
+	[ $? -ne 0 ] && echo "${INDEX_ID} get meta attribute hdfs_path failed." && return 1
+
+	PARTITION_ID=$(${ZKCTL_BIN} index get-meta-attr --index-id=${INDEX_ID} --key=index_partition_id)
+	SERVICE_ID="bs_${PARTITION_ID}"
+	SERVICE_INSTANCE_LIST=$(${ZKCTL_BIN} service list-service-instance --service-id=${SERVICE_ID})
+	[ $? -ne 0 ] && echo "${SERVICE_ID} get service instance list failed" && return 1
+	[ -z "${SERVICE_INSTANCE_LIST}" ] && echo "${SERVICE_ID} no service instance found" && return 0
+
+	HAS_FAILURE=0
+	for INSTANCE in ${SERVICE_INSTANCE_LIST}; do
+		${ZKCTL_BIN} service-instance set-planned-state-attr --service-instance-id=${INSTANCE} --key=future_timestamp --value=${INDEX_TIMESTAMP}
+		[ $? -ne 0 ] && echo "${INSTANCE} set planned state attribute future_index_timestamp failed." && HAS_FAILURE=1 && continue
+		${ZKCTL_BIN} service-instance set-planned-state-attr --service-instance-id=${INSTANCE} --key=future_index_version --value=${INDEX_VERSION}
+		[ $? -ne 0 ] && echo "${INSTANCE} set planned state attribute future_index_version failed." && HAS_FAILURE=1 && continue
+		${ZKCTL_BIN} service-instance set-planned-state-attr --service-instance-id=${INSTANCE} --key=future_location --value=${INDEX_HDFS_PATH}
+		[ $? -ne 0 ] && echo "${INSTANCE} set planned state attribute future_location failed." && HAS_FAILURE=1 && continue
+		echo ${INSTANCE}
+	done
+	return ${HAS_FAILURE}
+}
+
+# switch to online index
+function switch_index()
+{
+	INDEX_TIMESTAMP=$(${ZKCTL_BIN} index get-meta-attr --index-id=${INDEX_ID} --key=timestamp)
+	[ $? -ne 0 ] && echo "${INDEX_ID} get meta attribute timestamp failed." && return 1
+	INDEX_VERSION=$(${ZKCTL_BIN} index get-meta-attr --index-id=${INDEX_ID} --key=version)
+	[ $? -ne 0 ] && echo "${INDEX_ID} get meta attribute version failed." && return 1
+	INDEX_HDFS_PATH=$(${ZKCTL_BIN} index get-meta-attr --index-id=${INDEX_ID} --key=hdfs_path)
+	[ $? -ne 0 ] && echo "${INDEX_ID} get meta attribute hdfs_path failed." && return 1
+
+	PARTITION_ID=$(${ZKCTL_BIN} index get-meta-attr --index-id=${INDEX_ID} --key=index_partition_id)
+	SERVICE_ID="bs_${PARTITION_ID}"
+	SERVICE_INSTANCE_LIST=$(${ZKCTL_BIN} service list-service-instance --service-id=${SERVICE_ID})
+	[ $? -ne 0 ] && echo "${SERVICE_ID} get service instance list failed" && return 1
+	[ -z "${SERVICE_INSTANCE_LIST}" ] && echo "${SERVICE_ID} no service instance found" && return 0
+
+	HAS_FAILURE=0
+	for INSTANCE in ${SERVICE_INSTANCE_LIST}; do
+        bak_tm=""
+		BAK_TM=$(${ZKCTL_BIN} service-instance get-planned-state-attr --service-instance-id=${INSTANCE} --key=online_timestamp)
+        [ $? -eq 0 ] &&  bak_tm="--key=future_timestamp --value=${BAK_TM}"
+        bak_ver=""
+        BAK_VER=$(${ZKCTL_BIN} service-instance get-planned-state-attr --service-instance-id=${INSTANCE} --key=online_index_version)
+        [ $? -eq 0 ] && bak_ver="--key=future_index_version --value=${BAK_VER}"
+        bak_loc=""
+        BAK_LOC=$(${ZKCTL_BIN} service-instance set-planned-state-attr --service-instance-id=${INSTANCE} --key=online_location)
+        [ $? -eq 0 ] && bak_loc="--key=future_location --value=${BAK_LOC}"
+
+		${ZKCTL_BIN} service-instance set-planned-state-attr --service-instance-id=${INSTANCE} \
+            --key=online_timestamp --value=${INDEX_TIMESTAMP} $bak_tm \
+            --key=online_index_version --value=${INDEX_VERSION} $bak_ver \
+            --key=online_location --value=${INDEX_HDFS_PATH} $bak_loc 
+		[ $? -ne 0 ] && echo "${INSTANCE} set planned state attributes online_xxx and future_xxx failed." && HAS_FAILURE=1 && continue
+		echo ${INSTANCE}
+	done
+	return ${HAS_FAILURE}
+}
+
+[ "x${ACTION}" != "xregister" ] && [ "x${ACTION}" != "xdeploy" ] && [ "x${ACTION}" != "xswitch" ] && usage && exit 1
+${ACTION}_index
+exit $?
+
+

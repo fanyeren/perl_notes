@@ -1,0 +1,55 @@
+add service result=0
+add service instance result=0
+{"category":"auto","service_id":"bs_dnews_0","slavenode_id":"hankjin.vicp.net","state":"NEW","trans_db_priority":"1","up_down_state":"down"}
+get meta all result=0
+bs_dnews_2-0000000001
+get service instance result=0
+del service instance result=0
+{"slavenode_id":"hankjin.vicp.net"}
+Add meta category=auto result 0
+auto
+Get meta category=auto result 0
+Set meta category=auto result 0
+hjz
+Get meta category=auto result 0
+Add meta service_id=bs_dnews_0 result 0
+bs_dnews_0
+Get meta service_id=bs_dnews_0 result 0
+Set meta service_id=bs_dnews_0 result 0
+hjz
+Get meta service_id=bs_dnews_0 result 0
+service-instance add-meta-attr failed, this key field may be exist already
+Add meta slavenode_id=cq01-2011q4-setest3-11.vm.baidu.com result 1
+hankjin.vicp.net
+Get meta slavenode_id=cq01-2011q4-setest3-11.vm.baidu.com result 0
+Set meta slavenode_id=cq01-2011q4-setest3-11.vm.baidu.com result 0
+hjz
+Get meta slavenode_id=cq01-2011q4-setest3-11.vm.baidu.com result 0
+Add meta state=NEW result 0
+NEW
+Get meta state=NEW result 0
+Set meta state=NEW result 0
+hjz
+Get meta state=NEW result 0
+Add meta trans_db_priority=1 result 0
+1
+Get meta trans_db_priority=1 result 0
+Set meta trans_db_priority=1 result 0
+hjz
+Get meta trans_db_priority=1 result 0
+Add meta up_down_state=down result 0
+down
+Get meta up_down_state=down result 0
+Set meta up_down_state=down result 0
+hjz
+Get meta up_down_state=down result 0
+{"category":"hjz","service_id":"hjz","slavenode_id":"hjz","state":"hjz","trans_db_priority":"hjz","up_down_state":"hjz"}
+got meta all service-instance result result=0
+del meta attr category result=0
+del meta attr service_id result=0
+del meta attr slavenode_id result=0
+del meta attr state result=0
+del meta attr trans_db_priority result=0
+del meta attr up_down_state result=0
+{}
+got empty service-instance result result=0

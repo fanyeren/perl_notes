@@ -1,0 +1,39 @@
+#!/bin/bash
+source $(dirname $0)/common
+
+TYPE=index-partition
+
+node_clear $TYPE
+node_clear index-type
+
+#没有index-type时添加失败
+echo "Add with no index-type"
+./zkctl -w $TYPE add --$TYPE-id=dnews_0 --data={} 2>&1
+echo "Add with no index-type failed: result=$?"
+#准备数据, index-type
+./zkctl -w index-type add --index-type-id=dnews --data={}
+./zkctl -w index-type add --index-type-id=wp --data={}
+echo "add index type succedd result=$?"
+./zkctl -w index-type add --index-type-id=vip --data={}
+./zkctl -w index-type add --index-type-id=se --data={}
+#正常添加
+./zkctl -w $TYPE add --$TYPE-id=dnews_0 --data={}
+echo "Add with right index-type succeed: result=$?"
+./zkctl -w $TYPE add --$TYPE-id=wp_2 --data={}
+./zkctl -w $TYPE add --$TYPE-id=vip_1 --data={}
+./zkctl -w $TYPE add --$TYPE-id=se_3 --data={}
+./zkctl -w $TYPE list | sort
+
+#删除indextype
+./zkctl -w index-type del --index-type-id=wp 2>&1
+echo "delete should failed. result=$?"
+#删除
+./zkctl -w $TYPE del --$TYPE-id=wp_2 
+echo "delete index partition. result=$?"
+./zkctl -w $TYPE list | sort
+#删除已经删除的
+#./zkctl -w $TYPE del --$TYPE-id=wp_2 --data={} 2>&1
+echo "Delete already deleted result=$?"
+
+node_clear $TYPE
+node_clear index-type

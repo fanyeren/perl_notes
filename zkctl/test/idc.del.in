@@ -1,0 +1,12 @@
+#!/bin/bash
+source $(dirname $0)/common
+
+node_clear idc
+
+./zkctl -w idc add --idc-id=jx --data='{"auto_start_new_service":"off","safe_mode":"off"}'
+./zkctl -w idc add --idc-id=tc --data='{"auto_start_new_service":"off","safe_mode":"off"}'
+echo "current 2 idc"
+./zkctl -w idc list | sort
+echo "after delete jx"
+./zkctl -w idc del --idc-id=jx
+./zkctl -w idc list | sort

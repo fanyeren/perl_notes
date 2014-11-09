@@ -1,0 +1,24 @@
+{
+    "note": {
+        "dest": {
+            "m1": "vip1 se1",
+            "m2": "vip1 se2"
+        },
+        "case": "add a replica",
+        "situation": "vip replica increase from 2 to 3",
+        "action": "add a replica of vip"
+    },
+	"index_partition" : {
+		"vip_1" : {"group":"group_1","index_layer":"layer1","index_type":"vip","replication_factor":"3"},
+		"se_1" : {"group":"group_1","index_layer":"layer1","index_type":"se","replication_factor":"1"},
+		"se_2" : {"group":"group_1","index_layer":"layer1","index_type":"se","replication_factor":"1"}
+	},
+	"slavenode" : {
+		"m1" : {"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"\/home\/","failure_domain":"failure_domain_2","flash_capacity":"640G","flash_path":"\/ssd1\/","group":"group_1","idc":"jx","online_state":"online","safe-mode":"off","work_path":"\/home\/work\/search\/"},
+		"m2" : {"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"\/home\/","failure_domain":"failure_domain_2","flash_capacity":"640G","flash_path":"\/ssd1\/","group":"group_1","idc":"jx","online_state":"online","safe-mode":"off","work_path":"\/home\/work\/search\/"}
+	},
+	"placement" : {
+		"m1" : [{"service_port":-1,"partition":"vip_1", "state":"RUNNING"}, {"service_port":-1,"partition":"se_1", "state":"RUNNING"}],
+		"m2" : [{"service_port":-1,"partition":"vip_1", "state":"RUNNING"}, {"service_port":-1,"partition":"se_2", "state":"RUNNING"}]
+	}
+}

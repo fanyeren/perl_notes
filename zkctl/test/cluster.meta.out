@@ -1,0 +1,48 @@
+Add meta bs_deploy_dyndata_script_bandwidth_limit=10240 result 0
+10240
+Get meta bs_deploy_dyndata_script_bandwidth_limit=10240 result 0
+Add meta bs_deploy_dyndata_script_timeout=100 result 0
+100
+Get meta bs_deploy_dyndata_script_timeout=100 result 0
+Add meta bs_deploy_script_bandwidth_limit=10240 result 0
+10240
+Get meta bs_deploy_script_bandwidth_limit=10240 result 0
+Add meta bs_deploy_script_timeout=600 result 0
+600
+Get meta bs_deploy_script_timeout=600 result 0
+Add meta bs_healthcheck_script_timeout=10 result 0
+10
+Get meta bs_healthcheck_script_timeout=10 result 0
+Add meta bs_reload_script_timeout=30 result 0
+30
+Get meta bs_reload_script_timeout=30 result 0
+Add meta bs_start_script_timeout=300 result 0
+300
+Get meta bs_start_script_timeout=300 result 0
+Add meta bs_stop_script_timeout=30 result 0
+30
+Get meta bs_stop_script_timeout=30 result 0
+Add meta bs_switchdb_script_timeout=10 result 0
+10
+Get meta bs_switchdb_script_timeout=10 result 0
+Add meta bs_transdb_script_bandwidth_limit=10240 result 0
+10240
+Get meta bs_transdb_script_bandwidth_limit=10240 result 0
+Add meta bs_transdb_script_timeout=3600 result 0
+3600
+Get meta bs_transdb_script_timeout=3600 result 0
+{"bs_deploy_dyndata_script_bandwidth_limit":"10240","bs_deploy_dyndata_script_timeout":"100","bs_deploy_script_bandwidth_limit":"10240","bs_deploy_script_timeout":"600","bs_healthcheck_script_timeout":"10","bs_reload_script_timeout":"30","bs_start_script_timeout":"300","bs_stop_script_timeout":"30","bs_switchdb_script_timeout":"10","bs_transdb_script_bandwidth_limit":"10240","bs_transdb_script_timeout":"3600"}
+got all cluster result result=0
+del meta attr bs_deploy_dyndata_script_bandwidth_limit result=0
+del meta attr bs_deploy_dyndata_script_timeout result=0
+del meta attr bs_deploy_script_bandwidth_limit result=0
+del meta attr bs_deploy_script_timeout result=0
+del meta attr bs_healthcheck_script_timeout result=0
+del meta attr bs_reload_script_timeout result=0
+del meta attr bs_start_script_timeout result=0
+del meta attr bs_stop_script_timeout result=0
+del meta attr bs_switchdb_script_timeout result=0
+del meta attr bs_transdb_script_bandwidth_limit result=0
+del meta attr bs_transdb_script_timeout result=0
+{}
+got empty cluster result result=0

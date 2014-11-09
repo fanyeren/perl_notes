@@ -1,0 +1,75 @@
+#! /bin/bash
+
+PROGNAME=${0##*/} 
+
+function usage() 
+{ 
+cat <<EOF 
+push binary to online
+
+Usage: ${PROGNAME} -i|--service-instance-id -v|--index-version -b|--binary-version -f|--binary-hdfs-path
+       ${PROGNAME} -v|--index-version -b|--binary-version -f|--binary-hdfs-path
+       ${PROGNAME} -h|--help
+
+Options: 
+EOF
+cat <<EOF | column -s\& -t 
+	-i|--service-instance-id & service instance id
+	-v|--index-version & index version
+	-b|--binary-version & binary version
+	-f|--binary-hdfs-path & binary hdfs path
+	-h|--help & show this help 
+EOF
+echo
+} 
+
+SHORTOPTS="i:v:b:f:h"
+LONGOPTS="service-instance-id:,index-version:,binary-version:,binary-hdfs-path:,help"
+TEMP=`getopt --options ${SHORTOPTS} --longoptions ${LONGOPTS} --name ${PROGNAME} -- "$@"`
+[ $? -ne 0 ] &&	usage && exit 1
+
+eval set -- "$TEMP"
+
+while true ; do
+	case "$1" in
+		-i|--service-instance-id) SERVICE_INSTANCE_ID="$2"; shift 2;;
+		-v|--index-version) INDEX_VERSION="$2"; shift 2;;
+		-b|--binary-version) BINARY_VERSION="$2"; shift 2;;
+		-f|--binary-hdfs-path) BINARY_HDFS_PATH="$2"; shift 2;;
+		-h|--help) usage; exit 0;;
+		--) shift ; break ;;
+		*) usage; exit 1;;
+	esac
+done
+
+source "public.inc"
+
+if [ "x${SERVICE_INSTANCE_ID}" != "x" ]; then
+	SERVICE_INSTANCE_LIST=${SERVICE_INSTANCE_ID}
+else
+	SERVICE_INSTANCE_LIST=`cat`
+fi
+
+NEW_VERSION_INFO=$(cat <<EOF
+{
+	"service_location": "${BINARY_HDFS_PATH}",
+	"service_version": "${BINARY_VERSION}"
+}
+EOF)
+
+HAS_FAILURE=0
+for ID in ${SERVICE_INSTANCE_LIST}; do
+	VERSION_INFO=$(${ZKCTL_BIN} service-instance get-planned-state-attr --service-instance-id="${ID}" --key="version.${INDEX_VERSION}")
+	if [ $? -ne 0 ] || [ "x${VERSION_INFO}" == "x" ]; then
+		${ZKCTL_BIN} service-instance add-planned-state-attr --service-instance-id=${ID} --key="version.${INDEX_VERSION}" --value="${NEW_VERSION_INFO}"
+		[ $? -ne 0 ] && echo "${ID} add planned state attribute version.${INDEX_VERSION} failed." && HAS_FAILURE=1 && continue
+	else
+		${ZKCTL_BIN} service-instance set-planned-state-attr --service-instance-id=${ID} --key="version.${INDEX_VERSION}" --value="${NEW_VERSION_INFO}"
+		[ $? -ne 0 ] && echo "${ID} set planned state attribute version.${INDEX_VERSION} failed." && HAS_FAILURE=1 && continue
+	fi
+	echo ${ID}
+done
+
+exit ${HAS_FAILURE}
+
+

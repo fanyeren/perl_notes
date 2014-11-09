@@ -1,0 +1,36 @@
+n1
+n2
+n3
+n4
+n1
+n2
+n4
+list slavenode failed, check log for detail
+list slavenode with error idc result=1
+list slavenode failed, check log for detail
+list slavenode with invalid idc failed, result=1
+missing option "--data"
+Usage: zkctl idc add --idc-id='' --data='{}'
+n1
+n4
+n3
+n2
+Got slavenode id idc jx result=0
+n5
+n8
+n7
+n6
+Got slavenode id idc tc result=0
+n1
+n4
+n3
+n2
+got slavenode with empty group failed result=0
+n1
+n5
+n2
+n6
+Got slavenode id group group_1 result=0
+n4
+n3
+Got slavenode id idc jx, group group_2 result=0

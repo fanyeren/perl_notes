@@ -1,0 +1,48 @@
+Add meta cpu_capacity=1000 result 0
+1000
+Get meta cpu_capacity=1000 result 0
+Add meta disk_capacity=1200G result 0
+1200G
+Get meta disk_capacity=1200G result 0
+Add meta disk_path=/home result 0
+/home
+Get meta disk_path=/home result 0
+Add meta failure_domain=default result 0
+default
+Get meta failure_domain=default result 0
+Add meta flash_capacity=640G result 0
+640G
+Get meta flash_capacity=640G result 0
+Add meta flash_path=/ssd1 result 0
+/ssd1
+Get meta flash_path=/ssd1 result 0
+Add meta group=group_1 result 0
+group_1
+Get meta group=group_1 result 0
+Add meta idc=tc result 0
+tc
+Get meta idc=tc result 0
+Add meta online_state=online result 0
+online
+Get meta online_state=online result 0
+Add meta safe-mode=off result 0
+off
+Get meta safe-mode=off result 0
+Add meta work_path=/home/work/search result 0
+/home/work/search
+Get meta work_path=/home/work/search result 0
+{"cpu_capacity":"1000","disk_capacity":"1200G","disk_path":"\/home","failure_domain":"default","flash_capacity":"640G","flash_path":"\/ssd1","group":"group_1","idc":"tc","online_state":"online","safe-mode":"off","work_path":"\/home\/work\/search"}
+got all cluster result result=0
+del meta attr cpu_capacity result=0
+del meta attr disk_capacity result=0
+del meta attr disk_path result=0
+del meta attr failure_domain result=0
+del meta attr flash_capacity result=0
+del meta attr flash_path result=0
+del meta attr group result=0
+del meta attr idc result=0
+del meta attr online_state result=0
+del meta attr safe-mode result=0
+del meta attr work_path result=0
+{}
+got empty cluster result result=0
