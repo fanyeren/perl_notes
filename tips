@@ -22,3 +22,7 @@ use Data::Dump;
 
 use IO::Async;
 use IO::AIO;
+
+
+echo ${foo:-3}
+echo ${foo##*.}
