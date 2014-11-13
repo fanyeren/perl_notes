@@ -31,3 +31,6 @@ echo ${foo##*.}
 Monoceros
 
 https://metacpan.org/pod/Gazelle: It's created based on Starlet code. Many code was rewritten and optimized by XS.
+
+
+Devel::DidYouMean
