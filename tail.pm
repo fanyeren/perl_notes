@@ -15,6 +15,22 @@ use Fcntl qw(O_RDWR O_CREAT);
 
 use Cwd();
 
+my $CHECK_LENGTH = 512;
+
+sub new {
+    my $class = shift;
+
+    my $self = Symbol::gensym();
+
+    bless $self, $class;
+    tie *$self, $self;
+
+    if (@_) {
+        $self->open(@_) or return;
+    }
+
+    return $self;
+}
 
 sub _open {
     my ($self, $filename, $offset) = @_;
@@ -77,6 +93,33 @@ sub _save_offset_to_status {
     $status_fh->truncate($status_fh->tell);
 }
 
+
+sub _push_to_data {
+    my $self = shift;
+
+    my $chunk = shift;
+
+    if (length($chunk) >= $CHECK_LENGTH) {
+        *$self->{data_array} = [ substr $chunk, -$CHECK_LENGTH ];
+        *$self->{data_length} = $CHECK_LENGTH;
+        return;
+    }
+
+    my $data = *$self->{data_array};
+    my $data_length = *$self->{data_length};
+
+    push @$data, $chunk;
+
+    $data_length += length($chunk);
+
+    while($data_length - length($data->[0]) >= $CHECK_LENGTH) {
+        $data_length -= length($data->[0]);
+        shift @$data;
+    }
+
+    *$self->{data_length} = $data_length;
+}
+
 sub _get_current_checksum {
     my $self = shift;
     my $data_length = *$self->{data_length};
@@ -91,7 +134,7 @@ sub _get_current_checksum {
         $i++;
     }
 
-    for (; $i <= $#$data, $i++) {
+    for (; $i <= $#$data; $i++) {
         $digest->add($data->[$i]);
     }
 
